@@ -39,8 +39,10 @@ var (
 )
 
 const (
-	apiKeyMaxErrorsPerHour = 20
-	apiKeyLastUsedMinTouch = 30 * time.Second
+	apiKeyMaxErrorsPerHour     = 20
+	apiKeyDefaultAutoName      = "api"
+	apiKeyDefaultAutoGroupName = "codex"
+	apiKeyLastUsedMinTouch     = 30 * time.Second
 	// DB 写失败后的短退避，避免请求路径持续同步重试造成写风暴与高延迟。
 	apiKeyLastUsedFailBackoff = 5 * time.Second
 )
@@ -204,6 +206,7 @@ type APIKeyService struct {
 	authCacheL1           *ristretto.Cache
 	authCfg               apiKeyAuthCacheConfig
 	authGroup             singleflight.Group
+	autoCreateGroup       singleflight.Group
 	lastUsedTouchL1       sync.Map // keyID -> nextAllowedAt(time.Time)
 	lastUsedTouchSF       singleflight.Group
 }
@@ -429,11 +432,86 @@ func (s *APIKeyService) Create(ctx context.Context, userID int64, req CreateAPIK
 
 // List 获取用户的API Key列表
 func (s *APIKeyService) List(ctx context.Context, userID int64, params pagination.PaginationParams, filters APIKeyListFilters) ([]APIKey, *pagination.PaginationResult, error) {
-	keys, pagination, err := s.apiKeyRepo.ListByUserID(ctx, userID, params, filters)
+	keys, result, err := s.apiKeyRepo.ListByUserID(ctx, userID, params, filters)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list api keys: %w", err)
 	}
-	return keys, pagination, nil
+	if !shouldAutoCreateDefaultAPIKey(params, filters, keys, result) {
+		return keys, result, nil
+	}
+	if err := s.ensureDefaultAPIKey(ctx, userID); err != nil {
+		return nil, nil, err
+	}
+
+	keys, result, err = s.apiKeyRepo.ListByUserID(ctx, userID, params, filters)
+	if err != nil {
+		return nil, nil, fmt.Errorf("list api keys after auto create: %w", err)
+	}
+	return keys, result, nil
+}
+
+func shouldAutoCreateDefaultAPIKey(params pagination.PaginationParams, filters APIKeyListFilters, keys []APIKey, result *pagination.PaginationResult) bool {
+	if params.Page > 1 {
+		return false
+	}
+	if filters.Search != "" || filters.Status != "" || filters.GroupID != nil {
+		return false
+	}
+	if len(keys) != 0 || result == nil || result.Total != 0 {
+		return false
+	}
+	return true
+}
+
+func (s *APIKeyService) ensureDefaultAPIKey(ctx context.Context, userID int64) error {
+	_, err, _ := s.autoCreateGroup.Do(strconv.FormatInt(userID, 10), func() (any, error) {
+		count, err := s.apiKeyRepo.CountByUserID(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("count api keys before auto create: %w", err)
+		}
+		if count > 0 {
+			return nil, nil
+		}
+
+		groupID, err := s.defaultAPIKeyGroupID(ctx)
+		if err != nil {
+			return nil, err
+		}
+		_, err = s.Create(ctx, userID, CreateAPIKeyRequest{
+			Name:    apiKeyDefaultAutoName,
+			GroupID: groupID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("auto create default api key: %w", err)
+		}
+		return nil, nil
+	})
+	return err
+}
+
+func (s *APIKeyService) defaultAPIKeyGroupID(ctx context.Context) (*int64, error) {
+	groups, err := s.groupRepo.ListActive(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list active groups for default api key: %w", err)
+	}
+
+	var fallback *int64
+	for i := range groups {
+		if !strings.EqualFold(strings.TrimSpace(groups[i].Name), apiKeyDefaultAutoGroupName) {
+			continue
+		}
+		id := groups[i].ID
+		if strings.EqualFold(groups[i].Platform, PlatformOpenAI) {
+			return &id, nil
+		}
+		if fallback == nil {
+			fallback = &id
+		}
+	}
+	if fallback != nil {
+		return fallback, nil
+	}
+	return nil, fmt.Errorf("default api key group %q: %w", apiKeyDefaultAutoGroupName, ErrGroupNotFound)
 }
 
 func (s *APIKeyService) VerifyOwnership(ctx context.Context, userID int64, apiKeyIDs []int64) ([]int64, error) {
