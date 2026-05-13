@@ -178,4 +178,65 @@ describe('CodexSetupView', () => {
       apiKey: 'sk-test',
     })
   })
+
+  it('auto-selects the codex group and creates a key before writing', async () => {
+    const writeCodexConfig = vi.fn().mockResolvedValue({})
+    const queryGatewayUsage = vi.fn().mockResolvedValue({ status: 'active', available: 10 })
+    ;(window as any).sub2apiDesktop = {
+      isDesktop: true,
+      getServerUrl: vi.fn().mockResolvedValue('https://codex.apiz.ai'),
+      getEnvironment: vi.fn().mockResolvedValue({
+        platform: 'darwin',
+        configPath: '/tmp/.codex/config.toml',
+        authPath: '/tmp/.codex/auth.json',
+        existingMode: 'standard',
+        existingBaseUrl: '',
+      }),
+      writeCodexConfig,
+      queryGatewayUsage,
+      openCodexDownload: vi.fn(),
+      openConfigDir: vi.fn(),
+      setServerUrl: vi.fn(),
+    }
+    appStoreMock.fetchPublicSettings.mockResolvedValue({ api_base_url: 'https://codex.apiz.ai' })
+    apiMocks.getAvailable.mockResolvedValue([
+      {
+        id: 3,
+        name: 'OpenAI',
+        platform: 'openai',
+        status: 'active',
+      },
+      {
+        id: 8,
+        name: 'codex',
+        platform: 'openai',
+        status: 'active',
+      },
+    ])
+    apiMocks.listKeys.mockResolvedValue({ items: [] })
+    apiMocks.createKey.mockResolvedValue({
+      id: 21,
+      name: 'Codex Desktop',
+      key: 'sk-created',
+      group_id: 8,
+      status: 'active',
+    })
+
+    const wrapper = await mountView()
+    await flushPromises()
+
+    const writeButton = wrapper.findAll('button').find((button) =>
+      button.text().includes('desktopCodex.writeConfig')
+    )
+    expect(writeButton).toBeDefined()
+    await writeButton!.trigger('click')
+    await flushPromises()
+
+    expect(apiMocks.createKey).toHaveBeenCalledWith('Codex Desktop', 8)
+    expect(writeCodexConfig).toHaveBeenCalledWith({
+      baseUrl: 'https://codex.apiz.ai',
+      apiKey: 'sk-created',
+      mode: 'standard',
+    })
+  })
 })
