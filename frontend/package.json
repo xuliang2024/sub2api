@@ -11,7 +11,7 @@
     "desktop:dev": "electron .",
     "desktop:start": "electron .",
     "desktop:dist": "electron-builder",
-    "desktop:dist:mac": "electron-builder --mac zip --config.mac.identity=null",
+    "desktop:dist:mac": "electron-builder --mac",
     "desktop:dist:win": "electron-builder --win nsis portable",
     "desktop:dist:linux": "electron-builder --linux AppImage deb",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
@@ -77,11 +77,43 @@
     "directories": {
       "output": "release"
     },
+    "afterSign": "./scripts/notarize.cjs",
     "mac": {
-      "identity": null,
+      "identity": "yi liu (3DP337K4T3)",
       "category": "public.app-category.developer-tools",
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "target": [
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "Sub2API Desktop",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
       ]
     },
     "linux": {

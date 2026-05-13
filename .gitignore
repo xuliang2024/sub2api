@@ -93,6 +93,9 @@ temp/
 dist/
 build/
 release/
+!frontend/build/
+!frontend/build/entitlements.mac.plist
+!frontend/build/icon.icns
 
 # 后端嵌入的前端构建产物
 # Keep a placeholder file so `//go:embed all:dist` always has a match in CI/lint,
@@ -119,6 +122,8 @@ tests
 CLAUDE.md
 .claude
 scripts
+!frontend/scripts/
+!frontend/scripts/notarize.cjs
 .code-review-state
 #openspec/
 code-reviews/
@@ -131,6 +136,7 @@ docs/*
 !docs/PAYMENT.md
 !docs/PAYMENT_CN.md
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
+!docs/APIZ_DEPLOYMENT_CN.md
 .serena/
 .codex/
 frontend/coverage/

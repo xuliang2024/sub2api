@@ -33,4 +33,12 @@ module.exports = {
     "vue/multi-word-component-names": "off",
     "vue/no-use-v-if-with-v-for": "off",
   },
+  overrides: [
+    {
+      files: ["*.cjs", "**/*.cjs"],
+      rules: {
+        "@typescript-eslint/no-var-requires": "off",
+      },
+    },
+  ],
 };
