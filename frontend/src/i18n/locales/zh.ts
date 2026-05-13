@@ -33,18 +33,19 @@ export default {
       }
     },
     download: {
-      badge: 'Windows 版已可下载',
-      title: '下载 Sub2API Desktop for Windows',
+      badge: '桌面端已可下载',
+      title: '下载 Sub2API Desktop',
       description:
-        'Windows 安装器可通过 Microsoft 下载链接获取。安装后登录账号，选择你的中转 Key，即可一键写入本机 Codex 配置，省去手动复制 Base URL 和 API Key。',
+        'macOS 与 Windows 版本都可下载。Mac 用户下载已签名并通过 Apple 公证的 ZIP；Windows 用户使用 Microsoft Installer 链接。安装后登录账号，选择你的中转 Key，即可一键写入本机 Codex 配置。',
+      macButton: '下载 Mac 版',
       windowsButton: '下载 Windows 版',
-      versionLabel: '下载来源',
-      version: 'Microsoft Installer',
-      integrity: 'get.microsoft.com/installer',
+      versionLabel: '可用版本',
+      version: 'macOS Apple Silicon / Windows',
+      integrity: 'Mac: 已公证 ZIP · Windows: Microsoft Installer',
       steps: {
         install: {
           title: '1. 下载并安装',
-          description: '下载 ZIP 后解压，将 Sub2API Desktop 拖到 Applications 或直接运行。'
+          description: '选择你的系统版本下载并安装；macOS 解压后拖到 Applications，Windows 按安装器提示完成。'
         },
         login: {
           title: '2. 登录并选 Key',

@@ -33,18 +33,19 @@ export default {
       }
     },
     download: {
-      badge: 'Windows build ready',
-      title: 'Download Sub2API Desktop for Windows',
+      badge: 'Desktop builds ready',
+      title: 'Download Sub2API Desktop',
       description:
-        'The Windows installer is available through the Microsoft download link. Sign in, choose your relay key, and write the local Codex config without copying Base URL or API Key by hand.',
+        'Both macOS and Windows builds are available. Mac users can download the signed and Apple-notarized ZIP; Windows users can use the Microsoft Installer link. Sign in, choose your relay key, and write the local Codex config without copying Base URL or API Key by hand.',
+      macButton: 'Download for Mac',
       windowsButton: 'Download for Windows',
-      versionLabel: 'Download source',
-      version: 'Microsoft Installer',
-      integrity: 'get.microsoft.com/installer',
+      versionLabel: 'Available builds',
+      version: 'macOS Apple Silicon / Windows',
+      integrity: 'Mac: Notarized ZIP · Windows: Microsoft Installer',
       steps: {
         install: {
           title: '1. Download and install',
-          description: 'Download the ZIP, unzip it, then move Sub2API Desktop to Applications or run it directly.'
+          description: 'Choose the build for your system; unzip and move the macOS app to Applications, or follow the Windows installer prompts.'
         },
         login: {
           title: '2. Sign in and choose a key',

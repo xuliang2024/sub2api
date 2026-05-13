@@ -129,13 +129,23 @@
             <!-- CTA Button -->
             <div class="flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
               <a
-                :href="windowsDownloadUrl"
+                :href="macDownloadUrl"
                 target="_blank"
                 rel="noopener noreferrer"
                 download
                 class="btn btn-primary px-8 py-3 text-base shadow-lg shadow-primary-500/30"
               >
                 <Icon name="download" size="md" class="mr-2" :stroke-width="2" />
+                {{ t('home.download.macButton') }}
+              </a>
+              <a
+                :href="windowsDownloadUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                class="inline-flex items-center justify-center gap-2 border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-primary-300 hover:text-primary-700 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-200 dark:hover:border-primary-700 dark:hover:text-primary-300"
+              >
+                <Icon name="download" size="sm" />
                 {{ t('home.download.windowsButton') }}
               </a>
               <router-link
@@ -207,7 +217,7 @@
           </div>
         </div>
 
-        <!-- Mac Desktop Download -->
+        <!-- Desktop Download -->
         <section
           class="mb-12 border border-primary-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-primary-800/60 dark:bg-dark-900/80 md:p-6"
         >
@@ -244,11 +254,21 @@
                 </div>
               </div>
               <a
-                :href="windowsDownloadUrl"
+                :href="macDownloadUrl"
                 target="_blank"
                 rel="noopener noreferrer"
                 download
                 class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-950 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-gray-950/15 transition-colors hover:bg-gray-800 dark:bg-white dark:text-gray-950 dark:hover:bg-dark-100"
+              >
+                <Icon name="download" size="sm" :stroke-width="2" />
+                {{ t('home.download.macButton') }}
+              </a>
+              <a
+                :href="windowsDownloadUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                class="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-800 shadow-sm transition-colors hover:border-primary-300 hover:text-primary-700 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-200 dark:hover:border-primary-700 dark:hover:text-primary-300"
               >
                 <Icon name="download" size="sm" :stroke-width="2" />
                 {{ t('home.download.windowsButton') }}
@@ -513,6 +533,7 @@ const isDark = ref(document.documentElement.classList.contains('dark'))
 
 // GitHub URL
 const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
+const macDownloadUrl = 'https://pub-30b53688750140ac8432d5cea73f95e4.r2.dev/downloads/sub2api-desktop/Sub2API-Desktop-1.0.0-mac-arm64.zip'
 const windowsDownloadUrl = 'https://get.microsoft.com/installer/download/9PLM9XGG6VKS?cid=website_cta_psi'
 
 // Auth state
