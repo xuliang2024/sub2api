@@ -129,14 +129,14 @@
             <!-- CTA Button -->
             <div class="flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
               <a
-                :href="macDownloadUrl"
+                :href="windowsDownloadUrl"
                 target="_blank"
                 rel="noopener noreferrer"
                 download
                 class="btn btn-primary px-8 py-3 text-base shadow-lg shadow-primary-500/30"
               >
                 <Icon name="download" size="md" class="mr-2" :stroke-width="2" />
-                {{ t('home.download.macButton') }}
+                {{ t('home.download.windowsButton') }}
               </a>
               <router-link
                 :to="isAuthenticated ? dashboardPath : '/login'"
@@ -244,14 +244,14 @@
                 </div>
               </div>
               <a
-                :href="macDownloadUrl"
+                :href="windowsDownloadUrl"
                 target="_blank"
                 rel="noopener noreferrer"
                 download
                 class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-950 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-gray-950/15 transition-colors hover:bg-gray-800 dark:bg-white dark:text-gray-950 dark:hover:bg-dark-100"
               >
                 <Icon name="download" size="sm" :stroke-width="2" />
-                {{ t('home.download.macButton') }}
+                {{ t('home.download.windowsButton') }}
               </a>
             </div>
           </div>
@@ -513,7 +513,7 @@ const isDark = ref(document.documentElement.classList.contains('dark'))
 
 // GitHub URL
 const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
-const macDownloadUrl = 'https://pub-30b53688750140ac8432d5cea73f95e4.r2.dev/downloads/sub2api-desktop/Sub2API-Desktop-1.0.0-mac-arm64.zip'
+const windowsDownloadUrl = 'https://get.microsoft.com/installer/download/9PLM9XGG6VKS?cid=website_cta_psi'
 
 // Auth state
 const isAuthenticated = computed(() => authStore.isAuthenticated)

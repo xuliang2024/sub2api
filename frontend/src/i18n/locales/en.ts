@@ -33,14 +33,14 @@ export default {
       }
     },
     download: {
-      badge: 'Mac build ready',
-      title: 'Download Sub2API Desktop for macOS',
+      badge: 'Windows build ready',
+      title: 'Download Sub2API Desktop for Windows',
       description:
-        'The signed and Apple-notarized Mac ZIP is ready to download. Sign in, choose your relay key, and write the local Codex config without copying Base URL or API Key by hand.',
-      macButton: 'Download for Mac',
-      versionLabel: 'Current build',
-      version: 'v1.0.0 · macOS Apple Silicon · Notarized ZIP',
-      integrity: 'SHA256: 2de759317a0a1ad0b54c99a69ea7d7a6465fa6905d4d360512316b34bc910a06',
+        'The Windows installer is available through the Microsoft download link. Sign in, choose your relay key, and write the local Codex config without copying Base URL or API Key by hand.',
+      windowsButton: 'Download for Windows',
+      versionLabel: 'Download source',
+      version: 'Microsoft Installer',
+      integrity: 'get.microsoft.com/installer',
       steps: {
         install: {
           title: '1. Download and install',
