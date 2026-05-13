@@ -32,6 +32,29 @@ export default {
         label: 'Usage limits'
       }
     },
+    download: {
+      badge: 'Mac build ready',
+      title: 'Download Sub2API Desktop for macOS',
+      description:
+        'The packaged Mac build is ready to install. Sign in, choose your relay key, and write the local Codex config without copying Base URL or API Key by hand.',
+      macButton: 'Download for Mac',
+      versionLabel: 'Current build',
+      version: 'v1.0.0 · macOS Apple Silicon',
+      steps: {
+        install: {
+          title: '1. Download and install',
+          description: 'Unzip the package, then move Sub2API Desktop to Applications or run it directly.'
+        },
+        login: {
+          title: '2. Sign in and choose a key',
+          description: 'Open the dashboard and select an available Codex relay group and API key.'
+        },
+        write: {
+          title: '3. Write Codex config',
+          description: 'The desktop app backs up and updates local ~/.codex config, then Codex is ready in terminal.'
+        }
+      }
+    },
     tags: {
       subscriptionToApi: 'Codex Compute Relay',
       stickySession: 'Managed Setup',

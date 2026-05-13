@@ -128,9 +128,19 @@
 
             <!-- CTA Button -->
             <div class="flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
+              <a
+                :href="macDownloadUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                class="btn btn-primary px-8 py-3 text-base shadow-lg shadow-primary-500/30"
+              >
+                <Icon name="download" size="md" class="mr-2" :stroke-width="2" />
+                {{ t('home.download.macButton') }}
+              </a>
               <router-link
                 :to="isAuthenticated ? dashboardPath : '/login'"
-                class="btn btn-primary px-8 py-3 text-base shadow-lg shadow-primary-500/30"
+                class="inline-flex items-center justify-center gap-2 border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-primary-300 hover:text-primary-700 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-200 dark:hover:border-primary-700 dark:hover:text-primary-300"
               >
                 {{ isAuthenticated ? t('home.goToDashboard') : t('home.getStarted') }}
                 <Icon name="arrowRight" size="md" class="ml-2" :stroke-width="2" />
@@ -196,6 +206,64 @@
             </div>
           </div>
         </div>
+
+        <!-- Mac Desktop Download -->
+        <section
+          class="mb-12 border border-primary-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-primary-800/60 dark:bg-dark-900/80 md:p-6"
+        >
+          <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-start gap-4">
+              <div
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-cyan-500 text-white shadow-lg shadow-primary-500/20"
+              >
+                <Icon name="download" size="lg" :stroke-width="2" />
+              </div>
+              <div>
+                <div class="mb-2 inline-flex border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:border-amber-800/60 dark:bg-amber-900/30 dark:text-amber-300">
+                  {{ t('home.download.badge') }}
+                </div>
+                <h2 class="text-2xl font-bold text-gray-950 dark:text-white">
+                  {{ t('home.download.title') }}
+                </h2>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-gray-600 dark:text-dark-300">
+                  {{ t('home.download.description') }}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex shrink-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+              <div class="border border-gray-200 bg-white px-4 py-3 text-left dark:border-dark-700 dark:bg-dark-950">
+                <div class="text-xs uppercase text-gray-500 dark:text-dark-400">
+                  {{ t('home.download.versionLabel') }}
+                </div>
+                <div class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                  {{ t('home.download.version') }}
+                </div>
+              </div>
+              <a
+                :href="macDownloadUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-950 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-gray-950/15 transition-colors hover:bg-gray-800 dark:bg-white dark:text-gray-950 dark:hover:bg-dark-100"
+              >
+                <Icon name="download" size="sm" :stroke-width="2" />
+                {{ t('home.download.macButton') }}
+              </a>
+            </div>
+          </div>
+
+          <div class="mt-5 grid gap-3 md:grid-cols-3">
+            <div
+              v-for="step in downloadSteps"
+              :key="step.title"
+              class="border border-gray-200/80 bg-white/70 p-4 dark:border-dark-700/70 dark:bg-dark-950/60"
+            >
+              <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ step.title }}</div>
+              <div class="mt-1 text-xs leading-5 text-gray-500 dark:text-dark-400">{{ step.description }}</div>
+            </div>
+          </div>
+        </section>
 
         <!-- Feature Tags - Centered -->
         <div class="mb-12 flex flex-wrap items-center justify-center gap-4 md:gap-6">
@@ -419,6 +487,12 @@ const heroMetrics = computed(() => [
   { value: t('home.metrics.billing.value'), label: t('home.metrics.billing.label') }
 ])
 
+const downloadSteps = computed(() => [
+  { title: t('home.download.steps.install.title'), description: t('home.download.steps.install.description') },
+  { title: t('home.download.steps.login.title'), description: t('home.download.steps.login.description') },
+  { title: t('home.download.steps.write.title'), description: t('home.download.steps.write.description') }
+])
+
 // Site settings - directly from appStore (already initialized from injected config)
 const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'Sub2API')
 const siteLogo = computed(() => appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '')
@@ -436,6 +510,7 @@ const isDark = ref(document.documentElement.classList.contains('dark'))
 
 // GitHub URL
 const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
+const macDownloadUrl = 'https://pub-30b53688750140ac8432d5cea73f95e4.r2.dev/downloads/sub2api-desktop/Sub2API-Desktop-1.0.0-20260513-mac-arm64.zip'
 
 // Auth state
 const isAuthenticated = computed(() => authStore.isAuthenticated)

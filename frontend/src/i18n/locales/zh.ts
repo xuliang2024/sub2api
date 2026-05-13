@@ -32,6 +32,29 @@ export default {
         label: '用量与限额'
       }
     },
+    download: {
+      badge: 'Mac 版已可下载',
+      title: '下载 Sub2API Desktop for macOS',
+      description:
+        '已打包好的 Mac 版本可直接安装。安装后登录账号，选择你的中转 Key，即可一键写入本机 Codex 配置，省去手动复制 Base URL 和 API Key。',
+      macButton: '下载 Mac 版',
+      versionLabel: '当前版本',
+      version: 'v1.0.0 · macOS Apple Silicon',
+      steps: {
+        install: {
+          title: '1. 下载并安装',
+          description: '下载 zip 后解压，将 Sub2API Desktop 拖到 Applications 或直接运行。'
+        },
+        login: {
+          title: '2. 登录并选 Key',
+          description: '进入控制台选择可用的 Codex 中转分组和 API Key。'
+        },
+        write: {
+          title: '3. 一键写入 Codex',
+          description: '桌面端会备份并更新本机 ~/.codex 配置，然后即可在终端使用。'
+        }
+      }
+    },
     tags: {
       subscriptionToApi: 'Codex 算力中转',
       stickySession: '代搭建服务',
