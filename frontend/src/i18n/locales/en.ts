@@ -36,14 +36,15 @@ export default {
       badge: 'Mac build ready',
       title: 'Download Sub2API Desktop for macOS',
       description:
-        'The packaged Mac build is ready to install. Sign in, choose your relay key, and write the local Codex config without copying Base URL or API Key by hand.',
+        'The signed and Apple-notarized Mac ZIP is ready to download. Sign in, choose your relay key, and write the local Codex config without copying Base URL or API Key by hand.',
       macButton: 'Download for Mac',
       versionLabel: 'Current build',
-      version: 'v1.0.0 · macOS Apple Silicon',
+      version: 'v1.0.0 · macOS Apple Silicon · Notarized ZIP',
+      integrity: 'SHA256: 2de759317a0a1ad0b54c99a69ea7d7a6465fa6905d4d360512316b34bc910a06',
       steps: {
         install: {
           title: '1. Download and install',
-          description: 'Unzip the package, then move Sub2API Desktop to Applications or run it directly.'
+          description: 'Download the ZIP, unzip it, then move Sub2API Desktop to Applications or run it directly.'
         },
         login: {
           title: '2. Sign in and choose a key',

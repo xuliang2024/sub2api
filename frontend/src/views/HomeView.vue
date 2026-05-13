@@ -239,6 +239,9 @@
                 <div class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
                   {{ t('home.download.version') }}
                 </div>
+                <div class="mt-1 max-w-64 break-all text-xs text-gray-500 dark:text-dark-400">
+                  {{ t('home.download.integrity') }}
+                </div>
               </div>
               <a
                 :href="macDownloadUrl"
@@ -510,7 +513,7 @@ const isDark = ref(document.documentElement.classList.contains('dark'))
 
 // GitHub URL
 const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
-const macDownloadUrl = 'https://pub-30b53688750140ac8432d5cea73f95e4.r2.dev/downloads/sub2api-desktop/Sub2API-Desktop-1.0.0-20260513-mac-arm64.zip'
+const macDownloadUrl = 'https://pub-30b53688750140ac8432d5cea73f95e4.r2.dev/downloads/sub2api-desktop/Sub2API-Desktop-1.0.0-mac-arm64.zip'
 
 // Auth state
 const isAuthenticated = computed(() => authStore.isAuthenticated)
