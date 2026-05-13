@@ -8,15 +8,34 @@ export default {
     switchToDark: 'Switch to Dark Mode',
     dashboard: 'Dashboard',
     login: 'Login',
-    getStarted: 'Get Started',
+    getStarted: 'Start Relay Access',
     goToDashboard: 'Go to Dashboard',
     // User-focused value proposition
-    heroSubtitle: 'One Key, All AI Models',
-    heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',
+    heroEyebrow: 'Codex Compute Relay',
+    heroTitle: 'Professional Codex Compute Relay',
+    heroTitlePrefix: 'Professional Codex',
+    heroTitleSuffix: 'Compute Relay',
+    heroSubtitle: 'Stable relay access for Codex CLI, Codex Desktop, and development teams',
+    heroDescription:
+      'Use managed Codex compute relay immediately, or let us handle private deployment, domain setup, account pool configuration, usage controls, and ongoing operations.',
+    metrics: {
+      relay: {
+        value: 'Relay',
+        label: 'Codex access'
+      },
+      setup: {
+        value: 'Setup',
+        label: 'Managed delivery'
+      },
+      billing: {
+        value: 'Control',
+        label: 'Usage limits'
+      }
+    },
     tags: {
-      subscriptionToApi: 'Subscription to API',
-      stickySession: 'Session Persistence',
-      realtimeBilling: 'Pay As You Go'
+      subscriptionToApi: 'Codex Compute Relay',
+      stickySession: 'Managed Setup',
+      realtimeBilling: 'Stable Session Routing'
     },
     // Pain points section
     painPoints: {
@@ -46,12 +65,12 @@ export default {
       subtitle: 'Three simple steps to stress-free AI access'
     },
     features: {
-      unifiedGateway: 'One-Click Access',
-      unifiedGatewayDesc: 'Get a single API key to call all connected AI models. No separate applications needed.',
-      multiAccount: 'Always Reliable',
-      multiAccountDesc: 'Smart routing across multiple upstream accounts with automatic failover. Say goodbye to errors.',
-      balanceQuota: 'Pay What You Use',
-      balanceQuotaDesc: 'Usage-based billing with quota limits. Full visibility into team consumption.'
+      unifiedGateway: 'Professional Codex Relay',
+      unifiedGatewayDesc: 'API access built for Codex CLI and Desktop, with one key and one entry point ready for development workflows.',
+      multiAccount: 'Stable Pool Scheduling',
+      multiAccountDesc: 'Health checks, load distribution, and session persistence reduce rate-limit interruptions and account switching.',
+      balanceQuota: 'Managed Setup Delivery',
+      balanceQuotaDesc: 'Private relay setup is available, including deployment, domain wiring, configuration, verification, and ongoing operations.'
     },
     // Comparison section
     comparison: {
@@ -90,10 +109,16 @@ export default {
       }
     },
     providers: {
-      title: 'Supported AI Models',
-      description: 'One API, Multiple Choices',
-      supported: 'Supported',
+      title: 'Codex Workflow Access',
+      description: 'Unified access for terminals, desktop clients, and private deployments',
+      supported: 'Ready',
       soon: 'Soon',
+      service: 'Service',
+      codexCli: 'Codex CLI',
+      codexDesktop: 'Codex Desktop',
+      gptCodex: 'GPT Codex',
+      claudeCode: 'Claude Code',
+      privateDeploy: 'Private Deploy',
       claude: 'Claude',
       gemini: 'Gemini',
       antigravity: 'Antigravity',
@@ -344,6 +369,7 @@ export default {
     dashboard: 'Dashboard',
     announcements: 'Announcements',
     apiKeys: 'API Keys',
+    codexSetup: 'Codex Setup',
     usage: 'Usage',
     redeem: 'Redeem',
     affiliate: 'Affiliate Rebates',
@@ -382,6 +408,59 @@ export default {
     channelPricing: 'Channel Pricing',
     channelMonitor: 'Channel Monitor',
     channelStatus: 'Channel Status',
+  },
+
+  desktopCodex: {
+    title: 'Codex Quick Setup',
+    description: 'Download Codex, create an API key, and write the current service into local Codex config from the desktop app.',
+    webOnlyNotice: 'This is the web environment. Open this page in Sub2API Desktop to use one-click local config writing and local directory access.',
+    connection: 'Desktop Setup',
+    downloadCodex: 'Download Codex',
+    openConfigDir: 'Open Config Dir',
+    apiBaseUrl: 'API Base URL',
+    configMode: 'Config Mode',
+    standardMode: 'Standard Responses',
+    websocketMode: 'Responses WebSocket',
+    desktopServer: 'Desktop Server',
+    serverUrl: 'Server URL',
+    desktopReady: 'Desktop Connected',
+    webMode: 'Web Mode',
+    switchServer: 'Switch Server',
+    platform: 'Platform',
+    keySelection: 'Key Selection',
+    selectOpenAIGroup: 'Choose OpenAI Group and Key',
+    openaiGroup: 'OpenAI Group',
+    apiKey: 'API Key',
+    selectGroupPlaceholder: 'Choose an OpenAI group',
+    selectKeyPlaceholder: 'Choose an API key',
+    createKey: 'Create Codex Desktop Key',
+    creatingKey: 'Creating...',
+    noOpenaiGroups: 'This account has no available OpenAI groups. Buy a subscription or ask an admin to assign a group.',
+    writeAndVerify: 'Write & Verify',
+    oneClickConfig: 'One-click write and verify',
+    writeConfig: 'Write Codex Config',
+    writing: 'Writing...',
+    currentConfig: 'Current Local Config',
+    selectedKey: 'Selected Key',
+    detected: 'Config detected',
+    notWritten: 'Not written',
+    noBaseUrl: 'No Base URL detected',
+    writeSuccess: 'Codex config was written and verified.',
+    writeFailed: 'Failed to write Codex config',
+    available: 'Available',
+    status: 'Status',
+    updatedAt: 'Updated',
+    loadFailed: 'Failed to load setup data',
+    keyCreated: 'Codex Desktop Key created',
+    createKeyFailed: 'Failed to create API key',
+    downloadFailed: 'Failed to open Codex download',
+    openConfigDirFailed: 'Failed to open config directory',
+    switchServerFailed: 'Failed to switch server URL',
+    desktopActions: 'Desktop Shortcuts',
+    oneClickWrite: 'Write to Codex',
+    oneClickWriteWs: 'Write WebSocket Config',
+    writeButtonHint: 'Backs up and updates local ~/.codex/config.toml and auth.json',
+    bridgeUnavailable: 'This desktop version does not support local config writing yet. Update Sub2API Desktop and try again.',
   },
 
   // Auth

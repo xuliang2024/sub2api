@@ -28,6 +28,67 @@
           {{ platformDescription }}
         </p>
 
+        <div
+          v-if="desktopActionsVisible"
+          class="rounded-lg border border-primary-100 bg-primary-50 p-3 dark:border-primary-800 dark:bg-primary-900/20"
+        >
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p class="text-sm font-medium text-primary-800 dark:text-primary-200">
+                {{ t('desktopCodex.desktopActions') }}
+              </p>
+              <p class="mt-1 text-xs text-primary-700 dark:text-primary-300">
+                {{ t('desktopCodex.writeButtonHint') }}
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                :disabled="desktopBusy !== null || !desktopBridgeAvailable"
+                @click="writeDesktopConfig('standard')"
+              >
+                <Icon name="terminal" size="sm" class="mr-1.5" />
+                {{ desktopBusy === 'standard' ? t('desktopCodex.writing') : t('desktopCodex.oneClickWrite') }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                :disabled="desktopBusy !== null || !desktopBridgeAvailable"
+                @click="writeDesktopConfig('websocket')"
+              >
+                <Icon name="sync" size="sm" class="mr-1.5" />
+                {{ desktopBusy === 'websocket' ? t('desktopCodex.writing') : t('desktopCodex.oneClickWriteWs') }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                :disabled="desktopBusy !== null || !desktopBridgeAvailable"
+                @click="openDesktopDownload"
+              >
+                <Icon name="download" size="sm" class="mr-1.5" />
+                {{ t('desktopCodex.downloadCodex') }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                :disabled="desktopBusy !== null || !desktopBridgeAvailable"
+                @click="openDesktopConfigDir"
+              >
+                <Icon name="document" size="sm" class="mr-1.5" />
+                {{ t('desktopCodex.openConfigDir') }}
+              </button>
+            </div>
+          </div>
+          <p
+            v-if="desktopMessage || !desktopBridgeAvailable"
+            class="mt-3 rounded-lg px-3 py-2 text-sm"
+            :class="desktopMessageKind === 'error' || !desktopBridgeAvailable ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300' : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'"
+          >
+            {{ desktopMessage || t('desktopCodex.bridgeUnavailable') }}
+          </p>
+        </div>
+
         <!-- Client Tabs -->
         <div v-if="clientTabs.length" class="border-b border-gray-200 dark:border-dark-700">
           <nav class="-mb-px flex space-x-6" aria-label="Client">
@@ -121,7 +182,28 @@
     </div>
 
     <template #footer>
-      <div class="flex justify-end">
+      <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div v-if="desktopActionsVisible" class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="desktopBusy !== null || !desktopBridgeAvailable"
+            @click="writeDesktopConfig('standard')"
+          >
+            <Icon name="terminal" size="sm" class="mr-1.5" />
+            {{ desktopBusy === 'standard' ? t('desktopCodex.writing') : t('desktopCodex.oneClickWrite') }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="desktopBusy !== null || !desktopBridgeAvailable"
+            @click="writeDesktopConfig('websocket')"
+          >
+            <Icon name="sync" size="sm" class="mr-1.5" />
+            {{ desktopBusy === 'websocket' ? t('desktopCodex.writing') : t('desktopCodex.oneClickWriteWs') }}
+          </button>
+        </div>
+        <div v-else></div>
         <button
           @click="emit('close')"
           class="btn btn-secondary"
@@ -140,6 +222,7 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { useClipboard } from '@/composables/useClipboard'
 import type { GroupPlatform } from '@/types'
+import type { CodexConfigMode } from '@/types/global'
 
 interface Props {
   show: boolean
@@ -175,6 +258,21 @@ const { copyToClipboard: clipboardCopy } = useClipboard()
 const copiedIndex = ref<number | null>(null)
 const activeTab = ref<string>('unix')
 const activeClientTab = ref<string>('claude')
+const desktopBusy = ref<CodexConfigMode | 'download' | 'dir' | null>(null)
+const desktopMessage = ref('')
+const desktopMessageKind = ref<'success' | 'error'>('success')
+
+const isDesktopRuntime = computed(() =>
+  typeof window !== 'undefined' && /Electron/i.test(window.navigator?.userAgent || '')
+)
+
+const desktopBridgeAvailable = computed(() =>
+  props.platform === 'openai' && typeof window !== 'undefined' && !!window.sub2apiDesktop
+)
+
+const desktopActionsVisible = computed(() =>
+  props.platform === 'openai' && (desktopBridgeAvailable.value || isDesktopRuntime.value)
+)
 
 // Reset tabs when platform changes
 const defaultClientTab = computed(() => {
@@ -1048,6 +1146,61 @@ const copyContent = async (content: string, index: number) => {
     setTimeout(() => {
       copiedIndex.value = null
     }, 2000)
+  }
+}
+
+function desktopBaseUrl(): string {
+  return (props.baseUrl || window.location.origin).trim().replace(/\/+$/, '')
+}
+
+function setDesktopMessage(text: string, kind: 'success' | 'error' = 'success') {
+  desktopMessage.value = text
+  desktopMessageKind.value = kind
+}
+
+async function writeDesktopConfig(mode: CodexConfigMode) {
+  if (!window.sub2apiDesktop) return
+  desktopBusy.value = mode
+  setDesktopMessage('')
+  try {
+    await window.sub2apiDesktop.writeCodexConfig({
+      baseUrl: desktopBaseUrl(),
+      apiKey: props.apiKey,
+      mode,
+    })
+    await window.sub2apiDesktop.queryGatewayUsage({
+      baseUrl: desktopBaseUrl(),
+      apiKey: props.apiKey,
+    })
+    setDesktopMessage(t('desktopCodex.writeSuccess'))
+  } catch (error: any) {
+    setDesktopMessage(error?.message || t('desktopCodex.writeFailed'), 'error')
+  } finally {
+    desktopBusy.value = null
+  }
+}
+
+async function openDesktopDownload() {
+  if (!window.sub2apiDesktop) return
+  desktopBusy.value = 'download'
+  try {
+    await window.sub2apiDesktop.openCodexDownload()
+  } catch (error: any) {
+    setDesktopMessage(error?.message || t('desktopCodex.downloadFailed'), 'error')
+  } finally {
+    desktopBusy.value = null
+  }
+}
+
+async function openDesktopConfigDir() {
+  if (!window.sub2apiDesktop) return
+  desktopBusy.value = 'dir'
+  try {
+    await window.sub2apiDesktop.openConfigDir()
+  } catch (error: any) {
+    setDesktopMessage(error?.message || t('desktopCodex.openConfigDirFailed'), 'error')
+  } finally {
+    desktopBusy.value = null
   }
 }
 </script>

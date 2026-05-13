@@ -174,6 +174,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/codex-setup',
+    name: 'CodexSetup',
+    component: () => import('@/views/user/CodexSetupView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Codex Setup',
+      titleKey: 'desktopCodex.title',
+      descriptionKey: 'desktopCodex.description'
+    }
+  },
+  {
     path: '/usage',
     name: 'Usage',
     component: () => import('@/views/user/UsageView.vue'),

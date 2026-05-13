@@ -8,15 +8,34 @@ export default {
     switchToDark: '切换到深色模式',
     dashboard: '控制台',
     login: '登录',
-    getStarted: '立即开始',
+    getStarted: '立即接入',
     goToDashboard: '进入控制台',
     // 新增：面向用户的价值主张
-    heroSubtitle: '一个密钥，畅用多个 AI 模型',
-    heroDescription: '无需管理多个订阅账号，一站式接入 Claude、GPT、Gemini 等主流 AI 服务',
+    heroEyebrow: 'Codex Compute Relay',
+    heroTitle: '专业 Codex 算力中转',
+    heroTitlePrefix: '专业 Codex',
+    heroTitleSuffix: '算力中转',
+    heroSubtitle: '为 Codex CLI、Codex Desktop 和开发团队提供稳定中转服务',
+    heroDescription:
+      '提供可直接使用的 Codex 算力中转，也承接私有化部署、域名接入、账号池配置、用量计费与后续运维，减少自建踩坑成本。',
+    metrics: {
+      relay: {
+        value: '专线',
+        label: 'Codex 中转'
+      },
+      setup: {
+        value: '交付',
+        label: '部署代搭建'
+      },
+      billing: {
+        value: '透明',
+        label: '用量与限额'
+      }
+    },
     tags: {
-      subscriptionToApi: '订阅转 API',
-      stickySession: '会话保持',
-      realtimeBilling: '按量计费'
+      subscriptionToApi: 'Codex 算力中转',
+      stickySession: '代搭建服务',
+      realtimeBilling: '稳定会话调度'
     },
     // 用户痛点区块
     painPoints: {
@@ -46,12 +65,12 @@ export default {
       subtitle: '简单三步，开始省心使用 AI'
     },
     features: {
-      unifiedGateway: '一键接入',
-      unifiedGatewayDesc: '获取一个 API 密钥，即可调用所有已接入的 AI 模型，无需分别申请。',
-      multiAccount: '稳定可靠',
-      multiAccountDesc: '智能调度多个上游账号，自动切换和负载均衡，告别频繁报错。',
-      balanceQuota: '用多少付多少',
-      balanceQuotaDesc: '按实际使用量计费，支持设置配额上限，团队用量一目了然。'
+      unifiedGateway: '专业 Codex 中转',
+      unifiedGatewayDesc: '面向 Codex CLI / Desktop 的 API 接入，统一密钥、统一入口，开箱即可用于开发工作流。',
+      multiAccount: '稳定账号池调度',
+      multiAccountDesc: '对上游账号进行健康检查、负载分配和会话保持，减少限流、断流和频繁切换带来的中断。',
+      balanceQuota: '帮忙搭建交付',
+      balanceQuotaDesc: '可代搭建私有中转服务，覆盖部署、域名、配置、验证与后续运维，适合团队和商业使用。'
     },
     // 优势对比
     comparison: {
@@ -90,10 +109,16 @@ export default {
       }
     },
     providers: {
-      title: '已支持的 AI 模型',
-      description: '一个 API，多种选择',
-      supported: '已支持',
+      title: 'Codex 工作流接入场景',
+      description: '围绕开发终端、桌面客户端和私有部署统一接入',
+      supported: '可接入',
       soon: '即将推出',
+      service: '可服务',
+      codexCli: 'Codex CLI',
+      codexDesktop: 'Codex Desktop',
+      gptCodex: 'GPT Codex',
+      claudeCode: 'Claude Code',
+      privateDeploy: '私有部署',
       claude: 'Claude',
       gemini: 'Gemini',
       antigravity: 'Antigravity',
@@ -344,6 +369,7 @@ export default {
     dashboard: '仪表盘',
     announcements: '公告',
     apiKeys: 'API 密钥',
+    codexSetup: 'Codex 配置',
     usage: '使用记录',
     redeem: '兑换',
     affiliate: '邀请返利',
@@ -382,6 +408,59 @@ export default {
     channelPricing: '渠道定价',
     channelMonitor: '渠道监控',
     channelStatus: '渠道状态',
+  },
+
+  desktopCodex: {
+    title: 'Codex 快速配置',
+    description: '在桌面端下载 Codex、创建 API Key，并把当前服务一键写入本机 Codex 配置。',
+    webOnlyNotice: '当前是网页环境。请在 Sub2API Desktop 中打开此页面以使用一键写入和打开本机目录能力。',
+    connection: 'Desktop Setup',
+    downloadCodex: '下载 Codex',
+    openConfigDir: '打开配置目录',
+    apiBaseUrl: 'API Base URL',
+    configMode: '配置模式',
+    standardMode: '标准 Responses',
+    websocketMode: 'Responses WebSocket',
+    desktopServer: 'Desktop Server',
+    serverUrl: '服务地址',
+    desktopReady: '桌面端已连接',
+    webMode: '网页模式',
+    switchServer: '切换服务',
+    platform: '系统',
+    keySelection: 'Key Selection',
+    selectOpenAIGroup: '选择 OpenAI 分组与 Key',
+    openaiGroup: 'OpenAI 分组',
+    apiKey: 'API Key',
+    selectGroupPlaceholder: '选择 OpenAI 分组',
+    selectKeyPlaceholder: '选择 API Key',
+    createKey: '创建 Codex Desktop Key',
+    creatingKey: '创建中...',
+    noOpenaiGroups: '当前账号没有可用的 OpenAI 分组，请先购买订阅或联系管理员分配分组。',
+    writeAndVerify: 'Write & Verify',
+    oneClickConfig: '一键写入并验证',
+    writeConfig: '写入 Codex 配置',
+    writing: '写入中...',
+    currentConfig: '当前本机配置',
+    selectedKey: '已选 Key',
+    detected: '已检测到配置',
+    notWritten: '未写入',
+    noBaseUrl: '未检测到 Base URL',
+    writeSuccess: 'Codex 配置已写入并完成验证。',
+    writeFailed: '写入 Codex 配置失败',
+    available: '可用额度',
+    status: '状态',
+    updatedAt: '更新时间',
+    loadFailed: '加载配置数据失败',
+    keyCreated: 'Codex Desktop Key 已创建',
+    createKeyFailed: '创建 API Key 失败',
+    downloadFailed: '打开 Codex 下载地址失败',
+    openConfigDirFailed: '打开配置目录失败',
+    switchServerFailed: '切换服务地址失败',
+    desktopActions: '桌面快捷操作',
+    oneClickWrite: '一键写入 Codex',
+    oneClickWriteWs: '写入 WebSocket 配置',
+    writeButtonHint: '会备份并更新本机 ~/.codex/config.toml 与 auth.json',
+    bridgeUnavailable: '当前桌面端版本未启用本机写入能力，请更新 Sub2API Desktop 后重试。',
   },
 
   // Auth
