@@ -75,6 +75,10 @@ export async function setLocale(locale: string): Promise<void> {
   const { useAppStore } = await import('@/stores/app')
   const route = router.currentRoute.value
   const appStore = useAppStore()
+  if (window.sub2apiDesktop) {
+    document.title = window.sub2apiDesktop.appName || 'codex 助手'
+    return
+  }
   document.title = resolveDocumentTitle(route.meta.title, appStore.siteName, route.meta.titleKey as string)
 }
 

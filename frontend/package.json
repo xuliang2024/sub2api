@@ -68,7 +68,7 @@
   },
   "build": {
     "appId": "ai.apiz.sub2api.desktop",
-    "productName": "Sub2API Desktop",
+    "productName": "codex 助手",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "files": [
       "electron/**/*",
@@ -82,6 +82,10 @@
       "identity": "yi liu (3DP337K4T3)",
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
+      "extendInfo": {
+        "CFBundleDisplayName": "codex 助手",
+        "CFBundleName": "codex 助手"
+      },
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
@@ -102,7 +106,7 @@
       ]
     },
     "dmg": {
-      "title": "Sub2API Desktop",
+      "title": "codex 助手",
       "contents": [
         {
           "x": 130,

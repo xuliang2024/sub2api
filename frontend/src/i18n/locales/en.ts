@@ -57,6 +57,39 @@ export default {
         }
       }
     },
+    desktopGuide: {
+      badge: 'Desktop guide',
+      title: 'Finish local Codex setup',
+      description: 'You are already in the desktop app, so this page should guide setup instead of offering another app download. Check whether Codex is installed, then install Codex or import the relay config.',
+      checkButton: 'Check Codex',
+      downloadCodex: 'Download Codex',
+      importConfig: 'Import config',
+      recheck: 'Check again',
+      codexStatusLabel: 'Local Codex status',
+      statusChecking: 'Checking...',
+      statusUnknown: 'Not checked yet',
+      statusInstalled: 'Installed',
+      statusMissing: 'Codex not detected',
+      statusError: 'Check failed',
+      statusHint: 'Click check to read the local codex command status.',
+      missingHint: 'The codex command was not found in PATH. Install Codex first.',
+      checkFailed: 'Could not check the Codex install status.',
+      downloadFailed: 'Could not open the Codex download link.',
+      steps: {
+        check: {
+          title: '1. Check local Codex',
+          description: 'Look for the codex command in the system PATH and show its version or install path.'
+        },
+        download: {
+          title: '2. Install Codex',
+          description: 'If Codex is missing, open the official install entry, then return here and check again.'
+        },
+        import: {
+          title: '3. Import relay config',
+          description: 'Sign in, choose a Codex relay key, and write the local ~/.codex config in one click.'
+        }
+      }
+    },
     tags: {
       subscriptionToApi: 'Codex Compute Relay',
       stickySession: 'Managed Setup',

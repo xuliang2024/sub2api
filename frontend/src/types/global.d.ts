@@ -43,12 +43,20 @@ export interface GatewayUsageQueryInput {
   endDate?: string
 }
 
+export interface CodexInstallStatus {
+  installed: boolean
+  executablePath: string
+  version: string
+}
+
 export interface Sub2APIDesktopBridge {
   isDesktop: true
+  appName: string
   getEnvironment: () => Promise<CodexDesktopEnvironment>
   writeCodexConfig: (payload: CodexConfigWriteInput) => Promise<CodexConfigWriteResult>
   queryGatewayUsage: (payload: GatewayUsageQueryInput) => Promise<Record<string, any>>
   openCodexDownload: (platform?: 'mac' | 'windows' | 'linux') => Promise<string>
+  getCodexStatus: () => Promise<CodexInstallStatus>
   openConfigDir: () => Promise<string>
   getServerUrl: () => Promise<string>
   setServerUrl: (url: string) => Promise<string>

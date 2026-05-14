@@ -14,6 +14,14 @@ const appStore = useAppStore()
 const authStore = useAuthStore()
 const subscriptionStore = useSubscriptionStore()
 const announcementStore = useAnnouncementStore()
+const desktopAppName = () => window.sub2apiDesktop?.appName || 'codex 助手'
+const setDocumentTitle = () => {
+  if (window.sub2apiDesktop) {
+    document.title = desktopAppName()
+    return
+  }
+  document.title = resolveDocumentTitle(route.meta.title, appStore.siteName, route.meta.titleKey as string)
+}
 
 /**
  * Update favicon dynamically
@@ -107,7 +115,7 @@ onMounted(async () => {
   await appStore.fetchPublicSettings()
 
   // Re-resolve document title now that siteName is available
-  document.title = resolveDocumentTitle(route.meta.title, appStore.siteName, route.meta.titleKey as string)
+  setDocumentTitle()
 })
 </script>
 

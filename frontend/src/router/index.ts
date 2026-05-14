@@ -702,6 +702,10 @@ router.beforeEach((to, _from, next) => {
     document.title = resolveDocumentTitle(to.meta.title, appStore.siteName, to.meta.titleKey as string)
   }
 
+  if (typeof window !== 'undefined' && window.sub2apiDesktop) {
+    document.title = window.sub2apiDesktop.appName || 'codex 助手'
+  }
+
   // Check if route requires authentication
   const requiresAuth = to.meta.requiresAuth !== false // Default to true
   const requiresAdmin = to.meta.requiresAdmin === true

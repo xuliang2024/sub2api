@@ -1,6 +1,8 @@
 const { app, BrowserWindow, Menu, ipcMain, shell } = require("electron");
+const { execFile } = require("node:child_process");
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { promisify } = require("node:util");
 const {
   getEnvironment,
   queryGatewayUsage,
@@ -21,8 +23,14 @@ const FALLBACK_DESKTOP_MANIFEST = {
   }
 };
 
+const DESKTOP_APP_NAME = "codex 助手";
+const DESKTOP_ICON_PATH = path.join(__dirname, "assets", "icon.png");
 let mainWindow = null;
 let serverUrl = DEFAULT_SERVER_URL;
+const execFileAsync = promisify(execFile);
+if (app?.setName) {
+  app.setName(DESKTOP_APP_NAME);
+}
 
 function settingsPath() {
   return path.join(app.getPath("userData"), "desktop-settings.json");
@@ -68,6 +76,44 @@ function platformDownloadKey(platform = process.platform) {
   return "linux";
 }
 
+async function commandExists(command) {
+  try {
+    const result = await execFileAsync("sh", ["-lc", `command -v ${command}`], {
+      timeout: 3000
+    });
+    return String(result.stdout || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+async function getCodexStatus() {
+  const executablePath = await commandExists("codex");
+  if (!executablePath) {
+    return {
+      installed: false,
+      executablePath: "",
+      version: ""
+    };
+  }
+
+  let version = "";
+  try {
+    const result = await execFileAsync(executablePath, ["--version"], {
+      timeout: 3000
+    });
+    version = String(result.stdout || result.stderr || "").trim();
+  } catch {
+    version = "";
+  }
+
+  return {
+    installed: true,
+    executablePath,
+    version
+  };
+}
+
 async function fetchDesktopManifest() {
   const url = `${serverUrl.replace(/\/+$/, "")}/desktop-manifest.json`;
   const controller = new AbortController();
@@ -98,12 +144,17 @@ async function fetchDesktopManifest() {
 }
 
 function createWindow() {
+  if (process.platform === "darwin" && app.dock) {
+    app.dock.setIcon(DESKTOP_ICON_PATH);
+  }
+
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 820,
     minWidth: 980,
     minHeight: 680,
-    title: "Sub2API Desktop",
+    title: DESKTOP_APP_NAME,
+    icon: DESKTOP_ICON_PATH,
     backgroundColor: "#f8fafc",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -129,7 +180,7 @@ function buildMenu() {
   return Menu.buildFromTemplate([
     ...(process.platform === "darwin"
       ? [{
-          label: app.name,
+          label: DESKTOP_APP_NAME,
           submenu: [
             { role: "about" },
             { type: "separator" },
@@ -222,6 +273,11 @@ ipcMain.handle("desktop:open-codex-download", async (event, platform) => {
   }
   await shell.openExternal(url);
   return url;
+});
+
+ipcMain.handle("desktop:get-codex-status", async (event) => {
+  assertTrustedSender(event);
+  return getCodexStatus();
 });
 
 ipcMain.handle("desktop:get-server-url", async (event) => {

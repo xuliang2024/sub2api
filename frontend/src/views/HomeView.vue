@@ -128,6 +128,33 @@
 
             <!-- CTA Button -->
             <div class="flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
+              <template v-if="isDesktopRuntime">
+                <button
+                  type="button"
+                  class="btn btn-primary px-8 py-3 text-base shadow-lg shadow-primary-500/30"
+                  :disabled="checkingCodex"
+                  @click="checkCodexStatus"
+                >
+                  <Icon :name="checkingCodex ? 'refresh' : 'terminal'" size="md" class="mr-2" :stroke-width="2" />
+                  {{ t('home.desktopGuide.checkButton') }}
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-center gap-2 border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-primary-300 hover:text-primary-700 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-200 dark:hover:border-primary-700 dark:hover:text-primary-300"
+                  @click="openCodexDownload"
+                >
+                  <Icon name="download" size="sm" />
+                  {{ t('home.desktopGuide.downloadCodex') }}
+                </button>
+                <router-link
+                  :to="isAuthenticated ? '/codex-setup' : '/login'"
+                  class="inline-flex items-center justify-center gap-2 border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-primary-300 hover:text-primary-700 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-200 dark:hover:border-primary-700 dark:hover:text-primary-300"
+                >
+                  {{ t('home.desktopGuide.importConfig') }}
+                  <Icon name="arrowRight" size="md" class="ml-2" :stroke-width="2" />
+                </router-link>
+              </template>
+              <template v-else>
               <a
                 :href="macDownloadUrl"
                 target="_blank"
@@ -165,6 +192,7 @@
                 <Icon name="book" size="sm" />
                 {{ t('home.viewDocs') }}
               </a>
+              </template>
             </div>
 
             <div class="mx-auto mt-8 grid w-full max-w-xl grid-cols-1 gap-3 text-left sm:grid-cols-3 lg:mx-0">
@@ -217,8 +245,99 @@
           </div>
         </div>
 
+        <!-- Desktop Runtime Guide -->
+        <section
+          v-if="isDesktopRuntime"
+          class="mb-12 border border-primary-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-primary-800/60 dark:bg-dark-900/80 md:p-6"
+        >
+          <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div class="flex items-start gap-4">
+              <div
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary-500 to-cyan-500 text-white shadow-lg shadow-primary-500/20"
+              >
+                <Icon name="terminal" size="lg" :stroke-width="2" />
+              </div>
+              <div>
+                <div class="mb-2 inline-flex border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:border-primary-800/60 dark:bg-primary-900/30 dark:text-primary-300">
+                  {{ t('home.desktopGuide.badge') }}
+                </div>
+                <h2 class="text-2xl font-bold text-gray-950 dark:text-white">
+                  {{ t('home.desktopGuide.title') }}
+                </h2>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-gray-600 dark:text-dark-300">
+                  {{ t('home.desktopGuide.description') }}
+                </p>
+              </div>
+            </div>
+
+            <div class="w-full shrink-0 border border-gray-200 bg-white px-4 py-3 text-left dark:border-dark-700 dark:bg-dark-950 lg:w-80">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-xs uppercase text-gray-500 dark:text-dark-400">
+                    {{ t('home.desktopGuide.codexStatusLabel') }}
+                  </div>
+                  <div class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                    {{ codexStatusText }}
+                  </div>
+                </div>
+                <span
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-full"
+                  :class="codexInstalled ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'"
+                >
+                  <Icon :name="codexInstalled ? 'check' : 'download'" size="sm" :stroke-width="2" />
+                </span>
+              </div>
+              <div v-if="codexStatusDetail" class="mt-2 break-all text-xs leading-5 text-gray-500 dark:text-dark-400">
+                {{ codexStatusDetail }}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 grid gap-3 md:grid-cols-3">
+            <div
+              v-for="step in desktopGuideSteps"
+              :key="step.title"
+              class="border border-gray-200/80 bg-white/70 p-4 dark:border-dark-700/70 dark:bg-dark-950/60"
+            >
+              <div class="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-gray-950 text-white dark:bg-white dark:text-gray-950">
+                <Icon :name="step.icon" size="sm" :stroke-width="2" />
+              </div>
+              <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ step.title }}</div>
+              <div class="mt-1 text-xs leading-5 text-gray-500 dark:text-dark-400">{{ step.description }}</div>
+              <button
+                v-if="step.action === 'check'"
+                type="button"
+                class="mt-4 inline-flex items-center justify-center gap-2 border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-primary-300 hover:text-primary-700 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-200"
+                :disabled="checkingCodex"
+                @click="checkCodexStatus"
+              >
+                <Icon name="refresh" size="xs" />
+                {{ t('home.desktopGuide.recheck') }}
+              </button>
+              <button
+                v-else-if="step.action === 'download'"
+                type="button"
+                class="mt-4 inline-flex items-center justify-center gap-2 border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-primary-300 hover:text-primary-700 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-200"
+                @click="openCodexDownload"
+              >
+                <Icon name="download" size="xs" />
+                {{ t('home.desktopGuide.downloadCodex') }}
+              </button>
+              <router-link
+                v-else
+                :to="isAuthenticated ? '/codex-setup' : '/login'"
+                class="mt-4 inline-flex items-center justify-center gap-2 border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:border-primary-300 hover:text-primary-700 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-200"
+              >
+                <Icon name="arrowRight" size="xs" />
+                {{ t('home.desktopGuide.importConfig') }}
+              </router-link>
+            </div>
+          </div>
+        </section>
+
         <!-- Desktop Download -->
         <section
+          v-else
           class="mb-12 border border-primary-200/80 bg-white/80 p-5 shadow-sm backdrop-blur-sm dark:border-primary-800/60 dark:bg-dark-900/80 md:p-6"
         >
           <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -498,6 +617,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
+import type { CodexInstallStatus } from '@/types/global'
 
 const { t } = useI18n()
 
@@ -514,6 +634,27 @@ const downloadSteps = computed(() => [
   { title: t('home.download.steps.install.title'), description: t('home.download.steps.install.description') },
   { title: t('home.download.steps.login.title'), description: t('home.download.steps.login.description') },
   { title: t('home.download.steps.write.title'), description: t('home.download.steps.write.description') }
+])
+
+const desktopGuideSteps = computed(() => [
+  {
+    icon: 'terminal' as const,
+    action: 'check',
+    title: t('home.desktopGuide.steps.check.title'),
+    description: t('home.desktopGuide.steps.check.description')
+  },
+  {
+    icon: 'download' as const,
+    action: 'download',
+    title: t('home.desktopGuide.steps.download.title'),
+    description: t('home.desktopGuide.steps.download.description')
+  },
+  {
+    icon: 'cog' as const,
+    action: 'import',
+    title: t('home.desktopGuide.steps.import.title'),
+    description: t('home.desktopGuide.steps.import.description')
+  }
 ])
 
 // Site settings - directly from appStore (already initialized from injected config)
@@ -535,6 +676,23 @@ const isDark = ref(document.documentElement.classList.contains('dark'))
 const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
 const macDownloadUrl = 'https://pub-30b53688750140ac8432d5cea73f95e4.r2.dev/downloads/sub2api-desktop/Sub2API-Desktop-1.0.0-mac-arm64.zip'
 const windowsDownloadUrl = 'https://get.microsoft.com/installer/download/9PLM9XGG6VKS?cid=website_cta_psi'
+const isDesktopRuntime = computed(() => typeof window !== 'undefined' && !!window.sub2apiDesktop)
+const checkingCodex = ref(false)
+const codexStatus = ref<CodexInstallStatus | null>(null)
+const codexStatusError = ref('')
+const codexInstalled = computed(() => !!codexStatus.value?.installed)
+const codexStatusText = computed(() => {
+  if (checkingCodex.value) return t('home.desktopGuide.statusChecking')
+  if (codexStatusError.value) return t('home.desktopGuide.statusError')
+  if (!codexStatus.value) return t('home.desktopGuide.statusUnknown')
+  return codexStatus.value.installed ? t('home.desktopGuide.statusInstalled') : t('home.desktopGuide.statusMissing')
+})
+const codexStatusDetail = computed(() => {
+  if (codexStatusError.value) return codexStatusError.value
+  if (!codexStatus.value) return t('home.desktopGuide.statusHint')
+  if (!codexStatus.value.installed) return t('home.desktopGuide.missingHint')
+  return codexStatus.value.version || codexStatus.value.executablePath
+})
 
 // Auth state
 const isAuthenticated = computed(() => authStore.isAuthenticated)
@@ -568,6 +726,28 @@ function initTheme() {
   }
 }
 
+async function checkCodexStatus() {
+  if (!window.sub2apiDesktop) return
+  checkingCodex.value = true
+  codexStatusError.value = ''
+  try {
+    codexStatus.value = await window.sub2apiDesktop.getCodexStatus()
+  } catch (error: any) {
+    codexStatusError.value = error?.message || t('home.desktopGuide.checkFailed')
+  } finally {
+    checkingCodex.value = false
+  }
+}
+
+async function openCodexDownload() {
+  if (!window.sub2apiDesktop) return
+  try {
+    await window.sub2apiDesktop.openCodexDownload()
+  } catch (error: any) {
+    codexStatusError.value = error?.message || t('home.desktopGuide.downloadFailed')
+  }
+}
+
 onMounted(() => {
   initTheme()
 
@@ -577,6 +757,10 @@ onMounted(() => {
   // Ensure public settings are loaded (will use cache if already loaded from injected config)
   if (!appStore.publicSettingsLoaded) {
     appStore.fetchPublicSettings()
+  }
+
+  if (isDesktopRuntime.value) {
+    checkCodexStatus()
   }
 })
 </script>

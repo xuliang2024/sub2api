@@ -57,6 +57,39 @@ export default {
         }
       }
     },
+    desktopGuide: {
+      badge: '桌面端引导',
+      title: '完成 Codex 本机配置',
+      description: '当前已经在桌面端中打开，不需要再下载本应用。请先检查本机是否安装 Codex，再按引导下载 Codex 或导入中转配置。',
+      checkButton: '检查 Codex',
+      downloadCodex: '下载 Codex',
+      importConfig: '导入配置',
+      recheck: '重新检查',
+      codexStatusLabel: '本机 Codex 状态',
+      statusChecking: '检查中...',
+      statusUnknown: '尚未检查',
+      statusInstalled: '已安装',
+      statusMissing: '未检测到 Codex',
+      statusError: '检查失败',
+      statusHint: '点击检查后会读取本机 codex 命令状态。',
+      missingHint: '未在 PATH 中找到 codex 命令，请先安装 Codex。',
+      checkFailed: '无法检查 Codex 安装状态。',
+      downloadFailed: '无法打开 Codex 下载地址。',
+      steps: {
+        check: {
+          title: '1. 检查本机 Codex',
+          description: '自动查看系统 PATH 中是否已有 codex 命令，并显示版本或安装位置。'
+        },
+        download: {
+          title: '2. 安装 Codex',
+          description: '如果还没有 Codex，打开官方安装入口，安装完成后回到这里重新检查。'
+        },
+        import: {
+          title: '3. 导入中转配置',
+          description: '登录账号后选择 Codex 中转 Key，一键写入本机 ~/.codex 配置。'
+        }
+      }
+    },
     tags: {
       subscriptionToApi: 'Codex 算力中转',
       stickySession: '代搭建服务',
