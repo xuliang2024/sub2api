@@ -674,7 +674,7 @@ const isDark = ref(document.documentElement.classList.contains('dark'))
 
 // GitHub URL
 const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
-const macDownloadUrl = 'https://pub-30b53688750140ac8432d5cea73f95e4.r2.dev/downloads/sub2api-desktop/Sub2API-Desktop-1.0.0-mac-arm64.zip'
+const macDownloadUrl = 'https://pub-30b53688750140ac8432d5cea73f95e4.r2.dev/downloads/sub2api-desktop/codex-helper-1.0.0-mac-arm64.zip'
 const windowsDownloadUrl = 'https://get.microsoft.com/installer/download/9PLM9XGG6VKS?cid=website_cta_psi'
 const isDesktopRuntime = computed(() => typeof window !== 'undefined' && !!window.sub2apiDesktop)
 const checkingCodex = ref(false)
