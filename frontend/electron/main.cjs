@@ -17,7 +17,7 @@ const {
 
 const FALLBACK_DESKTOP_MANIFEST = {
   codexDownloads: {
-    mac: "https://cdn-video.51sux.com/downloads/codex/Codex-1-20260512-215253.dmg",
+    mac: "https://persistent.oaistatic.com/codex-app-prod/Codex.dmg",
     windows: "https://get.microsoft.com/installer/download/9PLM9XGG6VKS?cid=website_cta_psi",
     linux: "https://codex.apiz.ai/download"
   }

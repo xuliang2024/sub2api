@@ -1,6 +1,6 @@
 {
   "codexDownloads": {
-    "mac": "https://pub-30b53688750140ac8432d5cea73f95e4.r2.dev/downloads/sub2api-desktop/codex-helper-1.0.0-mac-arm64.zip",
+    "mac": "https://persistent.oaistatic.com/codex-app-prod/Codex.dmg",
     "windows": "https://get.microsoft.com/installer/download/9PLM9XGG6VKS?cid=website_cta_psi",
     "linux": "https://codex.apiz.ai/download"
   }
