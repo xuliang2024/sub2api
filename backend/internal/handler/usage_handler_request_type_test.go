@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
@@ -16,8 +18,9 @@ import (
 
 type userUsageRepoCapture struct {
 	service.UsageLogRepository
-	listParams  pagination.PaginationParams
-	listFilters usagestats.UsageLogFilters
+	listParams   pagination.PaginationParams
+	listFilters  usagestats.UsageLogFilters
+	rankingLimit int
 }
 
 func (s *userUsageRepoCapture) ListWithFilters(ctx context.Context, params pagination.PaginationParams, filters usagestats.UsageLogFilters) ([]service.UsageLog, *pagination.PaginationResult, error) {
@@ -31,6 +34,18 @@ func (s *userUsageRepoCapture) ListWithFilters(ctx context.Context, params pagin
 	}, nil
 }
 
+func (s *userUsageRepoCapture) GetUserSpendingRanking(ctx context.Context, startTime, endTime time.Time, limit int) (*usagestats.UserSpendingRankingResponse, error) {
+	s.rankingLimit = limit
+	return &usagestats.UserSpendingRankingResponse{
+		Ranking: []usagestats.UserSpendingRankingItem{
+			{UserID: 42, Email: "alice@example.com", ActualCost: 3.5, Requests: 2, Tokens: 1000},
+		},
+		TotalActualCost: 3.5,
+		TotalRequests:   2,
+		TotalTokens:     1000,
+	}, nil
+}
+
 func newUserUsageRequestTypeTestRouter(repo *userUsageRepoCapture) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	usageSvc := service.NewUsageService(repo, nil, nil, nil)
@@ -41,6 +56,7 @@ func newUserUsageRequestTypeTestRouter(repo *userUsageRepoCapture) *gin.Engine {
 		c.Next()
 	})
 	router.GET("/usage", handler.List)
+	router.GET("/usage/dashboard/users-ranking", handler.DashboardUsersRanking)
 	return router
 }
 
@@ -79,4 +95,29 @@ func TestUserUsageListInvalidStream(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestDashboardUsersRankingMasksUsersAndClampsLimit(t *testing.T) {
+	repo := &userUsageRepoCapture{}
+	router := newUserUsageRequestTypeTestRouter(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/usage/dashboard/users-ranking?limit=50&start_date=2026-05-01&end_date=2026-05-07", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, 10, repo.rankingLimit)
+	require.NotContains(t, rec.Body.String(), "alice@example.com")
+	require.Contains(t, rec.Body.String(), "a***e@e***e.com")
+
+	var envelope struct {
+		Code int `json:"code"`
+		Data struct {
+			Ranking []usagestats.PublicUserSpendingRankingItem `json:"ranking"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
+	require.Equal(t, 0, envelope.Code)
+	require.Len(t, envelope.Data.Ranking, 1)
+	require.True(t, envelope.Data.Ranking[0].IsCurrentUser)
 }

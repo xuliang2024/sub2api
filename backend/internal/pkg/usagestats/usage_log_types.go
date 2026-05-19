@@ -162,6 +162,24 @@ type UserSpendingRankingResponse struct {
 	TotalTokens     int64                     `json:"total_tokens"`
 }
 
+// PublicUserSpendingRankingItem represents a privacy-safe spending ranking row for user-facing dashboards.
+type PublicUserSpendingRankingItem struct {
+	Rank          int     `json:"rank"`
+	DisplayName   string  `json:"display_name"`
+	ActualCost    float64 `json:"actual_cost"` // 实际扣除
+	Requests      int64   `json:"requests"`
+	Tokens        int64   `json:"tokens"`
+	IsCurrentUser bool    `json:"is_current_user"`
+}
+
+// PublicUserSpendingRankingResponse represents privacy-safe ranking rows plus totals for the time range.
+type PublicUserSpendingRankingResponse struct {
+	Ranking         []PublicUserSpendingRankingItem `json:"ranking"`
+	TotalActualCost float64                         `json:"total_actual_cost"`
+	TotalRequests   int64                           `json:"total_requests"`
+	TotalTokens     int64                           `json:"total_tokens"`
+}
+
 // UserBreakdownItem represents per-user usage breakdown within a dimension (group, model, endpoint).
 type UserBreakdownItem struct {
 	UserID      int64   `json:"user_id"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -288,6 +289,37 @@ func (s *UsageService) GetUserDashboardStats(ctx context.Context, userID int64) 
 	return stats, nil
 }
 
+// GetPublicUserSpendingRanking returns a privacy-safe global spending ranking for user dashboards.
+func (s *UsageService) GetPublicUserSpendingRanking(ctx context.Context, currentUserID int64, startTime, endTime time.Time, limit int) (*usagestats.PublicUserSpendingRankingResponse, error) {
+	if limit <= 0 || limit > 10 {
+		limit = 10
+	}
+
+	ranking, err := s.usageRepo.GetUserSpendingRanking(ctx, startTime, endTime, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get public user spending ranking: %w", err)
+	}
+
+	response := &usagestats.PublicUserSpendingRankingResponse{
+		Ranking:         make([]usagestats.PublicUserSpendingRankingItem, 0, len(ranking.Ranking)),
+		TotalActualCost: ranking.TotalActualCost,
+		TotalRequests:   ranking.TotalRequests,
+		TotalTokens:     ranking.TotalTokens,
+	}
+	for i, item := range ranking.Ranking {
+		response.Ranking = append(response.Ranking, usagestats.PublicUserSpendingRankingItem{
+			Rank:          i + 1,
+			DisplayName:   publicRankingDisplayName(item.Email),
+			ActualCost:    item.ActualCost,
+			Requests:      item.Requests,
+			Tokens:        item.Tokens,
+			IsCurrentUser: item.UserID == currentUserID,
+		})
+	}
+
+	return response, nil
+}
+
 // GetAPIKeyDashboardStats returns dashboard summary stats filtered by API Key.
 func (s *UsageService) GetAPIKeyDashboardStats(ctx context.Context, apiKeyID int64) (*usagestats.UserDashboardStats, error) {
 	stats, err := s.usageRepo.GetAPIKeyDashboardStats(ctx, apiKeyID)
@@ -295,6 +327,39 @@ func (s *UsageService) GetAPIKeyDashboardStats(ctx context.Context, apiKeyID int
 		return nil, fmt.Errorf("get api key dashboard stats: %w", err)
 	}
 	return stats, nil
+}
+
+func publicRankingDisplayName(email string) string {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return "User"
+	}
+
+	local, domain, ok := strings.Cut(email, "@")
+	if !ok || strings.TrimSpace(local) == "" || strings.TrimSpace(domain) == "" {
+		return maskRankingSegment(email)
+	}
+
+	domainName, suffix, hasSuffix := strings.Cut(domain, ".")
+	if !hasSuffix || domainName == "" || suffix == "" {
+		return maskRankingSegment(local) + "@" + maskRankingSegment(domain)
+	}
+
+	return maskRankingSegment(local) + "@" + maskRankingSegment(domainName) + "." + suffix
+}
+
+func maskRankingSegment(value string) string {
+	runes := []rune(strings.TrimSpace(value))
+	switch {
+	case len(runes) == 0:
+		return "***"
+	case len(runes) == 1:
+		return string(runes[0]) + "***"
+	case len(runes) == 2:
+		return string(runes[0]) + "***" + string(runes[1])
+	default:
+		return string(runes[0]) + "***" + string(runes[len(runes)-1])
+	}
 }
 
 // GetUserUsageTrendByUserID returns per-user usage trend.

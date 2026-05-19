@@ -58,6 +58,24 @@ export interface ModelStatsResponse {
   end_date: string
 }
 
+export interface UserSpendingRankingItem {
+  rank: number
+  display_name: string
+  actual_cost: number
+  requests: number
+  tokens: number
+  is_current_user: boolean
+}
+
+export interface UserSpendingRankingResponse {
+  ranking: UserSpendingRankingItem[]
+  total_actual_cost: number
+  total_requests: number
+  total_tokens: number
+  start_date: string
+  end_date: string
+}
+
 /**
  * List usage logs with optional filters
  * @param page - Page number (default: 1)
@@ -223,6 +241,22 @@ export async function getDashboardModels(params?: {
   return data
 }
 
+/**
+ * Get privacy-safe global user spending ranking for the selected dashboard range
+ * @param params - Query parameters for filtering
+ * @returns Top user spending ranking
+ */
+export async function getDashboardUsersRanking(params?: {
+  start_date?: string
+  end_date?: string
+  limit?: number
+}): Promise<UserSpendingRankingResponse> {
+  const { data } = await apiClient.get<UserSpendingRankingResponse>('/usage/dashboard/users-ranking', {
+    params
+  })
+  return data
+}
+
 export interface BatchApiKeyUsageStats {
   api_key_id: number
   today_actual_cost: number
@@ -268,6 +302,7 @@ export const usageAPI = {
   getDashboardStats,
   getDashboardTrend,
   getDashboardModels,
+  getDashboardUsersRanking,
   getDashboardApiKeysUsage
 }
 

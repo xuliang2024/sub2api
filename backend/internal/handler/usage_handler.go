@@ -298,6 +298,17 @@ func parseUserTimeRange(c *gin.Context) (time.Time, time.Time) {
 	return startTime, endTime
 }
 
+func parseUserRankingLimit(raw string) int {
+	limit, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || limit <= 0 {
+		return 10
+	}
+	if limit > 10 {
+		return 10
+	}
+	return limit
+}
+
 // DashboardStats handles getting user dashboard statistics
 // GET /api/v1/usage/dashboard/stats
 func (h *UsageHandler) DashboardStats(c *gin.Context) {
@@ -363,6 +374,34 @@ func (h *UsageHandler) DashboardModels(c *gin.Context) {
 		"models":     stats,
 		"start_date": startTime.Format("2006-01-02"),
 		"end_date":   endTime.Add(-24 * time.Hour).Format("2006-01-02"),
+	})
+}
+
+// DashboardUsersRanking handles getting the privacy-safe user spending ranking.
+// GET /api/v1/usage/dashboard/users-ranking
+func (h *UsageHandler) DashboardUsersRanking(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	startTime, endTime := parseUserTimeRange(c)
+	limit := parseUserRankingLimit(c.DefaultQuery("limit", "10"))
+
+	ranking, err := h.usageService.GetPublicUserSpendingRanking(c.Request.Context(), subject.UserID, startTime, endTime, limit)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"ranking":           ranking.Ranking,
+		"total_actual_cost": ranking.TotalActualCost,
+		"total_requests":    ranking.TotalRequests,
+		"total_tokens":      ranking.TotalTokens,
+		"start_date":        startTime.Format("2006-01-02"),
+		"end_date":          endTime.Add(-24 * time.Hour).Format("2006-01-02"),
 	})
 }
 
