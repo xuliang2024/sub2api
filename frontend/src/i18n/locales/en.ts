@@ -429,6 +429,7 @@ export default {
     apiKeys: 'API Keys',
     codexSetup: 'Codex Setup',
     usage: 'Usage',
+    spendingRanking: 'Spending Ranking',
     redeem: 'Redeem',
     affiliate: 'Affiliate Rebates',
     affiliateManagement: 'Affiliate Rebates',
@@ -769,6 +770,11 @@ export default {
     checkDetailedLogs: 'Check detailed usage logs',
     redeemCode: 'Redeem Code',
     addBalanceWithCode: 'Add balance with a code'
+  },
+
+  spendingRanking: {
+    title: 'User Spending Ranking',
+    description: 'View the top 10 users by spending in the selected time range.'
   },
 
   // Groups (shared)

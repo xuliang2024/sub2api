@@ -429,6 +429,7 @@ export default {
     apiKeys: 'API 密钥',
     codexSetup: 'Codex 配置',
     usage: '使用记录',
+    spendingRanking: '消耗榜',
     redeem: '兑换',
     affiliate: '邀请返利',
     affiliateManagement: '邀请返利',
@@ -768,6 +769,11 @@ export default {
     checkDetailedLogs: '查看详细的使用日志',
     redeemCode: '兑换码',
     addBalanceWithCode: '使用兑换码充值'
+  },
+
+  spendingRanking: {
+    title: '用户消耗榜',
+    description: '查看当前时间范围内消耗最高的前 10 名用户。'
   },
 
   // Groups (shared)

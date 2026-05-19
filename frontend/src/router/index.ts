@@ -198,6 +198,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/spending-ranking',
+    name: 'SpendingRanking',
+    component: () => import('@/views/user/SpendingRankingView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Spending Ranking',
+      titleKey: 'spendingRanking.title',
+      descriptionKey: 'spendingRanking.description'
+    }
+  },
+  {
     path: '/redeem',
     name: 'Redeem',
     component: () => import('@/views/user/RedeemView.vue'),

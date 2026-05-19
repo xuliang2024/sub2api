@@ -5,7 +5,7 @@
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('dashboard.spendingRanking') }}</h2>
         <p class="text-xs text-gray-500 dark:text-dark-400">{{ t('dashboard.top10Users') }}</p>
       </div>
-      <span class="badge badge-gray">{{ t('dashboard.last7Days') }}</span>
+      <span class="badge badge-gray">{{ rangeLabel || t('dashboard.last7Days') }}</span>
     </div>
 
     <div class="p-6">
@@ -65,6 +65,7 @@ const props = defineProps<{
   items: UserSpendingRankingItem[]
   totalActualCost: number
   loading: boolean
+  rangeLabel?: string
 }>()
 
 const { t } = useI18n()
