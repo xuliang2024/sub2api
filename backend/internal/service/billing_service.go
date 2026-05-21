@@ -56,6 +56,7 @@ type ModelPricing struct {
 	LongContextInputThreshold      int     // 超过阈值后按整次会话提升输入价格
 	LongContextInputMultiplier     float64 // 长上下文整次会话输入倍率
 	LongContextOutputMultiplier    float64 // 长上下文整次会话输出倍率
+	ImageInputPricePerToken        float64 // 图片输入 token 价格 (USD)
 	ImageOutputPricePerToken       float64 // 图片输出 token 价格 (USD)
 }
 
@@ -95,6 +96,7 @@ type UsageTokens struct {
 	CacheReadTokens       int
 	CacheCreation5mTokens int
 	CacheCreation1hTokens int
+	ImageInputTokens      int
 	ImageOutputTokens     int
 }
 
@@ -258,6 +260,15 @@ func (s *BillingService) initFallbackPricing() {
 		CacheReadPricePerTokenPriority: 0.3e-6,
 		SupportsCacheBreakdown:         false,
 	}
+
+	// OpenAI gpt-image-2（官方图片 token 计费）
+	s.fallbackPrices["gpt-image-2"] = &ModelPricing{
+		InputPricePerToken:       5e-6,    // text input: $5 per MTok
+		CacheReadPricePerToken:   1.25e-6, // cached text input: $1.25 per MTok
+		ImageInputPricePerToken:  8e-6,    // image input: $8 per MTok
+		ImageOutputPricePerToken: 30e-6,   // image output: $30 per MTok
+		SupportsCacheBreakdown:   false,
+	}
 }
 
 // getFallbackPricing 根据模型系列获取回退价格
@@ -295,6 +306,9 @@ func (s *BillingService) getFallbackPricing(model string) *ModelPricing {
 	}
 	if strings.Contains(modelLower, "gemini-3.1-pro") || strings.Contains(modelLower, "gemini-3-1-pro") {
 		return s.fallbackPrices["gemini-3.1-pro"]
+	}
+	if strings.HasPrefix(modelLower, "gpt-image-2") {
+		return s.fallbackPrices["gpt-image-2"]
 	}
 
 	// OpenAI 仅匹配已知 GPT-5/Codex 族，避免未知 OpenAI 型号误计价。
@@ -347,6 +361,7 @@ func (s *BillingService) GetModelPricing(model string) (*ModelPricing, error) {
 				LongContextInputThreshold:      litellmPricing.LongContextInputTokenThreshold,
 				LongContextInputMultiplier:     litellmPricing.LongContextInputCostMultiplier,
 				LongContextOutputMultiplier:    litellmPricing.LongContextOutputCostMultiplier,
+				ImageInputPricePerToken:        litellmPricing.InputCostPerImageToken,
 				ImageOutputPricePerToken:       litellmPricing.OutputCostPerImageToken,
 			}), nil
 		}
@@ -504,7 +519,18 @@ func (s *BillingService) computeTokenBreakdown(
 	}
 
 	bd := &CostBreakdown{}
-	bd.InputCost = float64(tokens.InputTokens) * inputPrice
+	textInputTokens := tokens.InputTokens - tokens.ImageInputTokens
+	if textInputTokens < 0 {
+		textInputTokens = 0
+	}
+	bd.InputCost = float64(textInputTokens) * inputPrice
+	if tokens.ImageInputTokens > 0 {
+		imgInputPrice := pricing.ImageInputPricePerToken
+		if imgInputPrice == 0 {
+			imgInputPrice = inputPrice
+		}
+		bd.InputCost += float64(tokens.ImageInputTokens) * imgInputPrice
+	}
 
 	// 分离图片输出 token 与文本输出 token
 	textOutputTokens := tokens.OutputTokens - tokens.ImageOutputTokens
@@ -609,7 +635,9 @@ func (s *BillingService) calculateCostInternal(model string, tokens UsageTokens,
 	}
 
 	// 旧路径始终检查长上下文定价（无区间定价概念）
-	return s.computeTokenBreakdown(pricing, tokens, rateMultiplier, serviceTier, true), nil
+	breakdown := s.computeTokenBreakdown(pricing, tokens, rateMultiplier, serviceTier, true)
+	breakdown.BillingMode = string(BillingModeToken)
+	return breakdown, nil
 }
 
 func (s *BillingService) applyModelSpecificPricingPolicy(model string, pricing *ModelPricing) *ModelPricing {
@@ -708,6 +736,7 @@ func (s *BillingService) CalculateCostWithLongContext(model string, tokens Usage
 		CacheReadTokens:       inRangeCacheTokens,
 		CacheCreation5mTokens: tokens.CacheCreation5mTokens,
 		CacheCreation1hTokens: tokens.CacheCreation1hTokens,
+		ImageInputTokens:      tokens.ImageInputTokens,
 		ImageOutputTokens:     tokens.ImageOutputTokens,
 	}
 	inRangeCost, err := s.CalculateCost(model, inRangeTokens, rateMultiplier)

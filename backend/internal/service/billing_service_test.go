@@ -55,6 +55,40 @@ func TestCalculateCost_WithCacheTokens(t *testing.T) {
 	require.InDelta(t, expectedTotal, cost.TotalCost, 1e-10)
 }
 
+func TestCalculateCost_GPTImage2UsesOfficialTokenPricing(t *testing.T) {
+	svc := newTestBillingService()
+
+	tokens := UsageTokens{
+		InputTokens:       28,
+		OutputTokens:      196,
+		ImageOutputTokens: 196,
+	}
+	cost, err := svc.CalculateCost("gpt-image-2", tokens, 1.0)
+	require.NoError(t, err)
+
+	require.InDelta(t, 28*5e-6, cost.InputCost, 1e-12)
+	require.InDelta(t, 0, cost.OutputCost, 1e-12)
+	require.InDelta(t, 196*30e-6, cost.ImageOutputCost, 1e-12)
+	require.InDelta(t, 0.00602, cost.TotalCost, 1e-12)
+}
+
+func TestCalculateCost_GPTImage2SeparatesImageInputTokens(t *testing.T) {
+	svc := newTestBillingService()
+
+	tokens := UsageTokens{
+		InputTokens:       125,
+		ImageInputTokens:  100,
+		OutputTokens:      10,
+		ImageOutputTokens: 10,
+	}
+	cost, err := svc.CalculateCost("gpt-image-2", tokens, 1.0)
+	require.NoError(t, err)
+
+	require.InDelta(t, 25*5e-6+100*8e-6, cost.InputCost, 1e-12)
+	require.InDelta(t, 10*30e-6, cost.ImageOutputCost, 1e-12)
+	require.InDelta(t, 0, cost.OutputCost, 1e-12)
+}
+
 func TestCalculateCost_RateMultiplier(t *testing.T) {
 	svc := newTestBillingService()
 

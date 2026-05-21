@@ -922,7 +922,7 @@ func TestOpenAIGatewayServiceForwardImages_OAuthStreamingTransformsEvents(t *tes
 	require.Equal(t, "high", gjson.Get(completed.Data, "quality").String())
 	require.Equal(t, "1024x1024", gjson.Get(completed.Data, "size").String())
 	require.Equal(t, "auto", gjson.Get(completed.Data, "background").String())
-	require.JSONEq(t, `{"images":1}`, gjson.Get(completed.Data, "usage").Raw)
+	require.JSONEq(t, `{"input_tokens":5,"output_tokens":9,"output_tokens_details":{"image_tokens":4}}`, gjson.Get(completed.Data, "usage").Raw)
 	require.False(t, gjson.Get(completed.Data, "revised_prompt").Exists())
 }
 
@@ -1139,7 +1139,7 @@ func TestOpenAIGatewayServiceForwardImages_OAuthEditsStreamingTransformsEvents(t
 	require.Equal(t, "high", gjson.Get(completed.Data, "quality").String())
 	require.Equal(t, "1024x1024", gjson.Get(completed.Data, "size").String())
 	require.Equal(t, "transparent", gjson.Get(completed.Data, "background").String())
-	require.JSONEq(t, `{"images":1}`, gjson.Get(completed.Data, "usage").Raw)
+	require.JSONEq(t, `{"input_tokens":7,"output_tokens":10,"output_tokens_details":{"image_tokens":5}}`, gjson.Get(completed.Data, "usage").Raw)
 	require.False(t, gjson.Get(completed.Data, "revised_prompt").Exists())
 }
 
@@ -1225,7 +1225,7 @@ func TestCollectOpenAIImagesFromResponsesBody_MultilineSSE(t *testing.T) {
 	require.Len(t, results, 1)
 	require.Equal(t, "ZmluYWw=", results[0].Result)
 	require.Equal(t, "png", firstMeta.OutputFormat)
-	require.JSONEq(t, `{"images":1}`, string(usageRaw))
+	require.JSONEq(t, `{"input_tokens":5,"output_tokens":9,"output_tokens_details":{"image_tokens":4}}`, string(usageRaw))
 }
 
 func TestOpenAIGatewayServiceForwardImages_OAuthNonStreamingEmptyOutputTriggersFailover(t *testing.T) {
@@ -1331,7 +1331,7 @@ func TestOpenAIGatewayServiceForwardImages_OAuthStreamingHandlesOutputItemDoneFa
 	require.Equal(t, "ZmluYWw=", gjson.Get(completed.Data, "b64_json").String())
 	require.Equal(t, "data:image/png;base64,ZmluYWw=", gjson.Get(completed.Data, "url").String())
 	require.Equal(t, "gpt-image-2", gjson.Get(completed.Data, "model").String())
-	require.JSONEq(t, `{"images":1}`, gjson.Get(completed.Data, "usage").Raw)
+	require.JSONEq(t, `{"input_tokens":5,"output_tokens":9,"output_tokens_details":{"image_tokens":4}}`, gjson.Get(completed.Data, "usage").Raw)
 	require.NotContains(t, rec.Body.String(), "event: error")
 }
 
@@ -1386,7 +1386,7 @@ func TestOpenAIGatewayServiceForwardImages_OAuthStreamingHandlesMultilineSSE(t *
 	completed, ok := findOpenAIImageTestSSEEvent(events, "image_generation.completed")
 	require.True(t, ok)
 	require.Equal(t, "TXVsdGlsaW5l", gjson.Get(completed.Data, "b64_json").String())
-	require.JSONEq(t, `{"images":1}`, gjson.Get(completed.Data, "usage").Raw)
+	require.JSONEq(t, `{"input_tokens":6,"output_tokens":10,"output_tokens_details":{"image_tokens":5}}`, gjson.Get(completed.Data, "usage").Raw)
 	require.NotContains(t, rec.Body.String(), "event: error")
 }
 

@@ -12,6 +12,9 @@ const messages: Record<string, string> = {
   'admin.usage.cacheReadCost': 'Cache Read Cost',
   'usage.inputTokenPrice': 'Input price',
   'usage.outputTokenPrice': 'Output price',
+  'usage.imageOutputTokens': 'Image output tokens',
+  'usage.imageOutputTokenPrice': 'Image output price',
+  'usage.imageOutputCost': 'Image output cost',
   'usage.perMillionTokens': '/ 1M tokens',
   'usage.serviceTier': 'Service tier',
   'usage.serviceTierPriority': 'Fast',
@@ -80,8 +83,10 @@ const baseImageRow = {
   output_cost: 0,
   cache_creation_cost: 0,
   cache_read_cost: 0,
+  image_output_cost: 0,
   input_tokens: 0,
   output_tokens: 0,
+  image_output_tokens: 0,
   cache_creation_tokens: 0,
   cache_read_tokens: 0,
   cache_creation_5m_tokens: 0,
@@ -319,5 +324,50 @@ describe('admin UsageTable tooltip', () => {
     expect(text).toContain('Per-image price')
     expect(text).toContain('not recorded')
     expect(text).not.toContain('(2K)')
+  })
+
+  it('displays image rows billed by token as token mode with image output token pricing', async () => {
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [
+          {
+            ...baseImageRow,
+            request_id: 'req-admin-image-token',
+            billing_mode: 'token',
+            total_cost: 0.00602,
+            actual_cost: 0.00602,
+            input_tokens: 28,
+            output_tokens: 196,
+            image_output_tokens: 196,
+            input_cost: 0.00014,
+            output_cost: 0,
+            image_output_cost: 0.00588,
+            image_count: 1,
+            image_size: '1K',
+          },
+        ],
+        loading: false,
+        columns: [],
+      },
+      global: {
+        stubs: {
+          DataTable: DataTableStub,
+          EmptyState: true,
+          Icon: true,
+          Teleport: true,
+        },
+      },
+    })
+
+    await wrapper.find('.group.relative').trigger('mouseenter')
+    await nextTick()
+
+    const text = wrapper.text()
+    expect(text).toContain('Token')
+    expect(text).toContain('196 tok')
+    expect(text).toContain('Image output cost')
+    expect(text).toContain('Image output price')
+    expect(text).toContain('$30.0000 / 1M tokens')
+    expect(text).not.toContain('Per-image price')
   })
 })

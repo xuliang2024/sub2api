@@ -51,6 +51,14 @@ var (
 		Mode:                    "chat",
 		SupportsPromptCaching:   true,
 	}
+	openAIGPTImage2FallbackPricing = &LiteLLMModelPricing{
+		InputCostPerToken:       5e-06,
+		CacheReadInputTokenCost: 1.25e-06,
+		InputCostPerImageToken:  8e-06,
+		OutputCostPerImageToken: 3e-05,
+		LiteLLMProvider:         "openai",
+		Mode:                    "image_generation",
+	}
 )
 
 // LiteLLMModelPricing LiteLLM价格数据结构
@@ -72,6 +80,7 @@ type LiteLLMModelPricing struct {
 	Mode                                string  `json:"mode"`
 	SupportsPromptCaching               bool    `json:"supports_prompt_caching"`
 	OutputCostPerImage                  float64 `json:"output_cost_per_image"`       // 图片生成模型每张图片价格
+	InputCostPerImageToken              float64 `json:"input_cost_per_image_token"`  // 图片输入 token 价格
 	OutputCostPerImageToken             float64 `json:"output_cost_per_image_token"` // 图片输出 token 价格
 }
 
@@ -96,6 +105,7 @@ type LiteLLMRawEntry struct {
 	Mode                                string   `json:"mode"`
 	SupportsPromptCaching               bool     `json:"supports_prompt_caching"`
 	OutputCostPerImage                  *float64 `json:"output_cost_per_image"`
+	InputCostPerImageToken              *float64 `json:"input_cost_per_image_token"`
 	OutputCostPerImageToken             *float64 `json:"output_cost_per_image_token"`
 }
 
@@ -410,6 +420,9 @@ func (s *PricingService) parsePricingData(body []byte) (map[string]*LiteLLMModel
 		}
 		if entry.OutputCostPerImage != nil {
 			pricing.OutputCostPerImage = *entry.OutputCostPerImage
+		}
+		if entry.InputCostPerImageToken != nil {
+			pricing.InputCostPerImageToken = *entry.InputCostPerImageToken
 		}
 		if entry.OutputCostPerImageToken != nil {
 			pricing.OutputCostPerImageToken = *entry.OutputCostPerImageToken
@@ -824,6 +837,14 @@ func (s *PricingService) matchOpenAIModel(model string) *LiteLLMModelPricing {
 	}
 
 	if isOpenAIImageGenerationModel(model) {
+		if strings.HasPrefix(model, "gpt-image-2") {
+			if pricing, ok := s.pricingData["gpt-image-2"]; ok {
+				logger.LegacyPrintf("service.pricing", "[Pricing] OpenAI image fallback matched %s -> %s", model, "gpt-image-2")
+				return pricing
+			}
+			logger.LegacyPrintf("service.pricing", "[Pricing] OpenAI image fallback matched %s -> %s", model, "gpt-image-2(static)")
+			return openAIGPTImage2FallbackPricing
+		}
 		for _, candidate := range []string{"gpt-image-2", "gpt-image-1.5", "gpt-image-1"} {
 			if pricing, ok := s.pricingData[candidate]; ok {
 				logger.LegacyPrintf("service.pricing", "[Pricing] OpenAI image fallback matched %s -> %s", model, candidate)

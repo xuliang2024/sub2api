@@ -207,6 +207,7 @@ type OpenAIUsage struct {
 	OutputTokens             int `json:"output_tokens"`
 	CacheCreationInputTokens int `json:"cache_creation_input_tokens,omitempty"`
 	CacheReadInputTokens     int `json:"cache_read_input_tokens,omitempty"`
+	ImageInputTokens         int `json:"image_input_tokens,omitempty"`
 	ImageOutputTokens        int `json:"image_output_tokens,omitempty"`
 }
 
@@ -4822,6 +4823,10 @@ func openAIUsageFromGJSON(value gjson.Result) (OpenAIUsage, bool) {
 	if cacheReadTokens == 0 {
 		cacheReadTokens = value.Get("prompt_tokens_details.cached_tokens").Int()
 	}
+	imageInputTokens := value.Get("input_tokens_details.image_tokens").Int()
+	if imageInputTokens == 0 {
+		imageInputTokens = value.Get("prompt_tokens_details.image_tokens").Int()
+	}
 	imageOutputTokens := value.Get("output_tokens_details.image_tokens").Int()
 	if imageOutputTokens == 0 {
 		imageOutputTokens = value.Get("completion_tokens_details.image_tokens").Int()
@@ -4831,6 +4836,7 @@ func openAIUsageFromGJSON(value gjson.Result) (OpenAIUsage, bool) {
 		OutputTokens:             int(outputTokens),
 		CacheCreationInputTokens: int(value.Get("cache_creation_input_tokens").Int()),
 		CacheReadInputTokens:     int(cacheReadTokens),
+		ImageInputTokens:         int(imageInputTokens),
 		ImageOutputTokens:        int(imageOutputTokens),
 	}, true
 }
@@ -5398,6 +5404,7 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 		OutputTokens:        result.Usage.OutputTokens,
 		CacheCreationTokens: result.Usage.CacheCreationInputTokens,
 		CacheReadTokens:     result.Usage.CacheReadInputTokens,
+		ImageInputTokens:    clampUsageImageInputTokens(result.Usage.ImageInputTokens, actualInputTokens),
 		ImageOutputTokens:   result.Usage.ImageOutputTokens,
 	}
 
@@ -5507,7 +5514,7 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 		usageLog.TotalCost = cost.TotalCost
 		usageLog.ActualCost = cost.ActualCost
 	}
-	if result.ImageCount > 0 {
+	if cost != nil && cost.BillingMode == string(BillingModeImage) {
 		usageLog.RateMultiplier = imageMultiplier
 	} else {
 		usageLog.RateMultiplier = multiplier
@@ -5600,11 +5607,55 @@ func (s *OpenAIGatewayService) calculateOpenAIRecordUsageCost(
 ) (*CostBreakdown, error) {
 	billingModel := firstUsageBillingModel(billingModels)
 	if result != nil && result.ImageCount > 0 {
+		if resolved := s.resolveOpenAIChannelPricing(ctx, billingModel, apiKey); resolved != nil &&
+			(resolved.Mode == BillingModePerRequest || resolved.Mode == BillingModeImage) {
+			return s.calculateOpenAIImageCost(ctx, billingModel, apiKey, result, imageMultiplier), nil
+		}
+		if openAIImageUsageHasTokenBillingData(tokens) {
+			cost, err := s.calculateOpenAIUsageCostFromCandidates(ctx, apiKey, billingModels, multiplier, tokens, serviceTier)
+			if err == nil {
+				return cost, nil
+			}
+			logger.L().With(
+				zap.String("component", "service.openai_gateway"),
+				zap.Strings("billing_models", billingModels),
+				zap.Int64("api_key_id", apiKey.ID),
+			).Warn("openai_usage.image_token_pricing_failed_fallback_to_image", zap.Error(err))
+		}
 		return s.calculateOpenAIImageCost(ctx, billingModel, apiKey, result, imageMultiplier), nil
 	}
 	if len(billingModels) == 0 || billingModel == "" {
 		return nil, errors.New("openai usage billing model is empty")
 	}
+	return s.calculateOpenAIUsageCostFromCandidates(ctx, apiKey, billingModels, multiplier, tokens, serviceTier)
+}
+
+func openAIImageUsageHasTokenBillingData(tokens UsageTokens) bool {
+	return tokens.InputTokens > 0 || tokens.OutputTokens > 0 || tokens.ImageInputTokens > 0 ||
+		tokens.ImageOutputTokens > 0 || tokens.CacheReadTokens > 0 || tokens.CacheCreationTokens > 0
+}
+
+func clampUsageImageInputTokens(imageInputTokens int, actualInputTokens int) int {
+	if imageInputTokens <= 0 {
+		return 0
+	}
+	if actualInputTokens <= 0 {
+		return imageInputTokens
+	}
+	if imageInputTokens > actualInputTokens {
+		return actualInputTokens
+	}
+	return imageInputTokens
+}
+
+func (s *OpenAIGatewayService) calculateOpenAIUsageCostFromCandidates(
+	ctx context.Context,
+	apiKey *APIKey,
+	billingModels []string,
+	multiplier float64,
+	tokens UsageTokens,
+	serviceTier string,
+) (*CostBreakdown, error) {
 	var lastErr error
 	for _, candidate := range billingModels {
 		candidate = strings.TrimSpace(candidate)

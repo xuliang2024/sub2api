@@ -1407,7 +1407,7 @@ func TestOpenAIGatewayServiceRecordUsage_OutputImageSizeWinsBeforeBillingAndPers
 	require.InDelta(t, 0.44, usageRepo.lastLog.ActualCost, 1e-12)
 }
 
-func TestOpenAIGatewayServiceRecordUsage_ImageUsesPerImageBillingEvenWithUsageTokens(t *testing.T) {
+func TestOpenAIGatewayServiceRecordUsage_ImageUsesTokenBillingWhenUsageTokensReturned(t *testing.T) {
 	imagePrice := 0.02
 	groupID := int64(12)
 
@@ -1445,13 +1445,14 @@ func TestOpenAIGatewayServiceRecordUsage_ImageUsesPerImageBillingEvenWithUsageTo
 	require.NoError(t, err)
 	require.NotNil(t, usageRepo.lastLog)
 	require.NotNil(t, usageRepo.lastLog.BillingMode)
-	require.Equal(t, string(BillingModeImage), *usageRepo.lastLog.BillingMode)
+	require.Equal(t, string(BillingModeToken), *usageRepo.lastLog.BillingMode)
 	require.Equal(t, 2, usageRepo.lastLog.ImageCount)
-	require.InDelta(t, 0.04, usageRepo.lastLog.TotalCost, 1e-12)
-	require.InDelta(t, 0.04, usageRepo.lastLog.ActualCost, 1e-12)
-	require.InDelta(t, 0.0, usageRepo.lastLog.InputCost, 1e-12)
+	require.InDelta(t, 0.00555, usageRepo.lastLog.InputCost, 1e-12)
 	require.InDelta(t, 0.0, usageRepo.lastLog.OutputCost, 1e-12)
-	require.InDelta(t, 0.0, usageRepo.lastLog.ImageOutputCost, 1e-12)
+	require.InDelta(t, 0.05268, usageRepo.lastLog.ImageOutputCost, 1e-12)
+	require.InDelta(t, 0.05823, usageRepo.lastLog.TotalCost, 1e-12)
+	require.InDelta(t, 0.05823, usageRepo.lastLog.ActualCost, 1e-12)
+	require.InDelta(t, 1.0, usageRepo.lastLog.RateMultiplier, 1e-12)
 }
 
 func TestOpenAIGatewayServiceRecordUsage_ImageSharedMultiplierPreservesExistingBehavior(t *testing.T) {

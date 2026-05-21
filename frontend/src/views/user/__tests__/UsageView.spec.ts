@@ -22,6 +22,9 @@ const messages: Record<string, string> = {
   'admin.usage.cacheReadCost': 'Cache Read Cost',
   'usage.inputTokenPrice': 'Input price',
   'usage.outputTokenPrice': 'Output price',
+  'usage.imageOutputTokens': 'Image output tokens',
+  'usage.imageOutputTokenPrice': 'Image output price',
+  'usage.imageOutputCost': 'Image output cost',
   'usage.perMillionTokens': '/ 1M tokens',
   'usage.serviceTier': 'Service tier',
   'usage.serviceTierPriority': 'Fast',
@@ -319,10 +322,12 @@ describe('user UsageView tooltip', () => {
         service_tier: null,
         input_cost: 0,
         output_cost: 0,
+        image_output_cost: 0,
         cache_creation_cost: 0,
         cache_read_cost: 0,
         input_tokens: 0,
         output_tokens: 0,
+        image_output_tokens: 0,
         cache_creation_tokens: 0,
         cache_read_tokens: 0,
         cache_creation_5m_tokens: 0,
@@ -410,10 +415,12 @@ describe('user UsageView tooltip', () => {
           service_tier: null,
           input_cost: 0,
           output_cost: 0,
+          image_output_cost: 0,
           cache_creation_cost: 0,
           cache_read_cost: 0,
           input_tokens: 0,
           output_tokens: 0,
+          image_output_tokens: 0,
           cache_creation_tokens: 0,
           cache_read_tokens: 0,
           cache_creation_5m_tokens: 0,
@@ -508,10 +515,12 @@ describe('user UsageView tooltip', () => {
       service_tier: null,
       input_cost: 0,
       output_cost: 0,
+      image_output_cost: 0,
       cache_creation_cost: 0,
       cache_read_cost: 0,
       input_tokens: 0,
       output_tokens: 0,
+      image_output_tokens: 0,
       cache_creation_tokens: 0,
       cache_read_tokens: 0,
       billing_mode: null,
@@ -536,5 +545,108 @@ describe('user UsageView tooltip', () => {
     expect(text).toContain('Output size')
     expect(text).toContain('3840x2160')
     expect(text).toContain('4K x 2')
+  })
+
+  it('shows image rows billed by token with image output token pricing', async () => {
+    query.mockResolvedValue({
+      items: [
+        {
+          request_id: 'req-user-image-token',
+          actual_cost: 0.00602,
+          total_cost: 0.00602,
+          rate_multiplier: 1,
+          service_tier: null,
+          input_cost: 0.00014,
+          output_cost: 0,
+          image_output_cost: 0.00588,
+          cache_creation_cost: 0,
+          cache_read_cost: 0,
+          input_tokens: 28,
+          output_tokens: 196,
+          image_output_tokens: 196,
+          cache_creation_tokens: 0,
+          cache_read_tokens: 0,
+          cache_creation_5m_tokens: 0,
+          cache_creation_1h_tokens: 0,
+          image_count: 1,
+          image_size: '1K',
+          image_input_size: null,
+          image_output_size: null,
+          image_size_source: 'output',
+          image_size_breakdown: null,
+          billing_mode: 'token',
+          first_token_ms: null,
+          duration_ms: 1,
+          created_at: '2026-03-08T00:00:00Z',
+          model: 'gpt-image-2',
+        },
+      ],
+      total: 1,
+      pages: 1,
+    })
+    getStatsByDateRange.mockResolvedValue({
+      total_requests: 1,
+      total_tokens: 224,
+      total_cost: 0.00602,
+      avg_duration_ms: 1,
+    })
+    list.mockResolvedValue({ items: [] })
+
+    const wrapper = mount(UsageView, {
+      global: {
+        stubs: {
+          AppLayout: AppLayoutStub,
+          TablePageLayout: TablePageLayoutStub,
+          Pagination: true,
+          EmptyState: true,
+          Select: true,
+          DateRangePicker: true,
+          DataTable: DataTableStub,
+          Icon: true,
+          Teleport: true,
+        },
+      },
+    })
+
+    await flushPromises()
+    await nextTick()
+
+    const text = wrapper.text()
+    expect(text).toContain('Token')
+    expect(text).toContain('196 tok')
+
+    const setupState = (wrapper.vm as any).$?.setupState
+    setupState.tooltipData = {
+      request_id: 'req-user-image-token',
+      actual_cost: 0.00602,
+      total_cost: 0.00602,
+      rate_multiplier: 1,
+      service_tier: null,
+      input_cost: 0.00014,
+      output_cost: 0,
+      image_output_cost: 0.00588,
+      cache_creation_cost: 0,
+      cache_read_cost: 0,
+      input_tokens: 28,
+      output_tokens: 196,
+      image_output_tokens: 196,
+      cache_creation_tokens: 0,
+      cache_read_tokens: 0,
+      billing_mode: 'token',
+      image_count: 1,
+      image_size: '1K',
+      image_input_size: null,
+      image_output_size: null,
+      image_size_source: 'output',
+      image_size_breakdown: null,
+    }
+    setupState.tooltipVisible = true
+    await nextTick()
+
+    const tooltipText = wrapper.text()
+    expect(tooltipText).toContain('Image output cost')
+    expect(tooltipText).toContain('Image output price')
+    expect(tooltipText).toContain('$30.0000 / 1M tokens')
+    expect(tooltipText).not.toContain('Per-image price')
   })
 })
