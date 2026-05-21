@@ -197,6 +197,17 @@ func TestAccountIsModelSupported(t *testing.T) {
 			expected:       true,
 		},
 		{
+			name:     "openai codex alias matches normalized mapping",
+			platform: PlatformOpenAI,
+			credentials: map[string]any{
+				"model_mapping": map[string]any{
+					"gpt-5.3-codex": "gpt-5.3-codex",
+				},
+			},
+			requestedModel: "gpt-5-codex",
+			expected:       true,
+		},
+		{
 			name: "wildcard match not supported",
 			credentials: map[string]any{
 				"model_mapping": map[string]any{
@@ -281,6 +292,17 @@ func TestAccountGetMappedModel(t *testing.T) {
 			},
 			requestedModel: "gemini-3.1-pro-preview-customtools",
 			expected:       "gemini-3.1-pro-preview",
+		},
+		{
+			name:     "openai codex alias resolves through normalized mapping",
+			platform: PlatformOpenAI,
+			credentials: map[string]any{
+				"model_mapping": map[string]any{
+					"gpt-5.3-codex": "gpt-5.3-codex",
+				},
+			},
+			requestedModel: "gpt-5-codex",
+			expected:       "gpt-5.3-codex",
 		},
 		{
 			name:     "gemini customtools exact mapping wins over normalized fallback",
@@ -368,6 +390,18 @@ func TestAccountResolveMappedModel(t *testing.T) {
 			},
 			requestedModel: "gemini-3.1-pro-preview-customtools",
 			expectedModel:  "gemini-3.1-pro-preview",
+			expectedMatch:  true,
+		},
+		{
+			name:     "openai codex alias reports normalized match",
+			platform: PlatformOpenAI,
+			credentials: map[string]any{
+				"model_mapping": map[string]any{
+					"gpt-5.3-codex": "gpt-5.3-codex",
+				},
+			},
+			requestedModel: "gpt-5-codex",
+			expectedModel:  "gpt-5.3-codex",
 			expectedMatch:  true,
 		},
 		{
