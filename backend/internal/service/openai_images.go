@@ -40,6 +40,7 @@ const (
 	openAIImageMaxDownloadBytes    = 20 << 20 // 20MB per image download
 	openAIImageMaxUploadPartSize   = 20 << 20 // 20MB per multipart upload part
 	openAIImagesResponsesMainModel = "gpt-5.4-mini"
+	openAIImageNormalizedBaseEdge  = 1024
 )
 
 type OpenAIImagesCapability string
@@ -535,6 +536,83 @@ func normalizeOpenAIImageSizeTier(size string) string {
 	return NormalizeImageBillingTierOrDefault(size)
 }
 
+func normalizeOpenAIImageUpstreamSize(size string) string {
+	trimmed := strings.TrimSpace(size)
+	if trimmed == "" || strings.EqualFold(trimmed, "auto") {
+		return trimmed
+	}
+
+	switch strings.ToUpper(trimmed) {
+	case "1K":
+		return "1024x1024"
+	case "2K":
+		return "2048x2048"
+	case "4K":
+		return "3840x2160"
+	}
+
+	if width, height, ok := parseImageBillingDimensions(trimmed); ok {
+		return fmt.Sprintf("%dx%d", width, height)
+	}
+	if width, height, ok := parseOpenAIImageAspectRatioDimensions(trimmed); ok {
+		return fmt.Sprintf("%dx%d", width, height)
+	}
+	return trimmed
+}
+
+func parseOpenAIImageAspectRatioDimensions(size string) (int, int, bool) {
+	parts := strings.Split(strings.TrimSpace(size), ":")
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	widthRatio, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil || widthRatio <= 0 {
+		return 0, 0, false
+	}
+	heightRatio, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err != nil || heightRatio <= 0 {
+		return 0, 0, false
+	}
+
+	if widthRatio > heightRatio {
+		if widthRatio > heightRatio*3 {
+			return 0, 0, false
+		}
+		width := roundToNearestMultiple(openAIImageNormalizedBaseEdge*widthRatio/heightRatio, 16)
+		if width < openAIImageNormalizedBaseEdge {
+			width = openAIImageNormalizedBaseEdge
+		}
+		return width, openAIImageNormalizedBaseEdge, true
+	}
+	if heightRatio > widthRatio {
+		if heightRatio > widthRatio*3 {
+			return 0, 0, false
+		}
+		height := roundToNearestMultiple(openAIImageNormalizedBaseEdge*heightRatio/widthRatio, 16)
+		if height < openAIImageNormalizedBaseEdge {
+			height = openAIImageNormalizedBaseEdge
+		}
+		return openAIImageNormalizedBaseEdge, height, true
+	}
+	return openAIImageNormalizedBaseEdge, openAIImageNormalizedBaseEdge, true
+}
+
+func roundToNearestMultiple(value int, multiple int) int {
+	if multiple <= 0 {
+		return value
+	}
+	remainder := value % multiple
+	if remainder == 0 {
+		return value
+	}
+	down := value - remainder
+	up := down + multiple
+	if value-down < up-value {
+		return down
+	}
+	return up
+}
+
 func (s *OpenAIGatewayService) ForwardImages(
 	ctx context.Context,
 	c *gin.Context,
@@ -584,7 +662,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 		parsed.Endpoint,
 		account.Type,
 	)
-	forwardBody, forwardContentType, err := rewriteOpenAIImagesModel(body, parsed.ContentType, upstreamModel)
+	forwardBody, forwardContentType, err := rewriteOpenAIImagesRequest(body, parsed.ContentType, upstreamModel, parsed.Size)
 	if err != nil {
 		return nil, err
 	}
@@ -619,7 +697,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesAPIKey(
 			Kind:               "request_error",
 			Message:            safeErr,
 		})
-		return nil, fmt.Errorf("upstream request failed: %s", safeErr)
+		return nil, newOpenAIImagesTransientFailoverError(http.StatusBadGateway, safeErr, true)
 	}
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
@@ -766,24 +844,34 @@ func buildOpenAIImagesURL(base string, endpoint string) string {
 	return buildOpenAIEndpointURL(base, endpoint)
 }
 
-func rewriteOpenAIImagesModel(body []byte, contentType string, model string) ([]byte, string, error) {
+func rewriteOpenAIImagesRequest(body []byte, contentType string, model string, size string) ([]byte, string, error) {
 	model = strings.TrimSpace(model)
-	if model == "" {
+	upstreamSize := strings.TrimSpace(normalizeOpenAIImageUpstreamSize(size))
+	if model == "" && upstreamSize == "" {
 		return body, contentType, nil
 	}
 	mediaType, _, err := mime.ParseMediaType(contentType)
 	if err == nil && strings.EqualFold(mediaType, "multipart/form-data") {
-		rewrittenBody, rewrittenType, rewriteErr := rewriteOpenAIImagesMultipartModel(body, contentType, model)
+		rewrittenBody, rewrittenType, rewriteErr := rewriteOpenAIImagesMultipartRequest(body, contentType, model, upstreamSize)
 		return rewrittenBody, rewrittenType, rewriteErr
 	}
-	rewritten, err := sjson.SetBytes(body, "model", model)
-	if err != nil {
-		return nil, "", fmt.Errorf("rewrite image request model: %w", err)
+	rewritten := body
+	if model != "" {
+		rewritten, err = sjson.SetBytes(rewritten, "model", model)
+		if err != nil {
+			return nil, "", fmt.Errorf("rewrite image request model: %w", err)
+		}
+	}
+	if upstreamSize != "" {
+		rewritten, err = sjson.SetBytes(rewritten, "size", upstreamSize)
+		if err != nil {
+			return nil, "", fmt.Errorf("rewrite image request size: %w", err)
+		}
 	}
 	return rewritten, contentType, nil
 }
 
-func rewriteOpenAIImagesMultipartModel(body []byte, contentType string, model string) ([]byte, string, error) {
+func rewriteOpenAIImagesMultipartRequest(body []byte, contentType string, model string, size string) ([]byte, string, error) {
 	_, params, err := mime.ParseMediaType(contentType)
 	if err != nil {
 		return nil, "", fmt.Errorf("parse multipart content-type: %w", err)
@@ -796,7 +884,8 @@ func rewriteOpenAIImagesMultipartModel(body []byte, contentType string, model st
 	reader := multipart.NewReader(bytes.NewReader(body), boundary)
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
-	modelWritten := false
+	modelWritten := model == ""
+	sizeWritten := size == ""
 
 	for {
 		part, err := reader.NextPart()
@@ -824,6 +913,15 @@ func rewriteOpenAIImagesMultipartModel(body []byte, contentType string, model st
 			_ = part.Close()
 			continue
 		}
+		if formName == "size" && part.FileName() == "" && size != "" {
+			if _, err := target.Write([]byte(size)); err != nil {
+				_ = part.Close()
+				return nil, "", fmt.Errorf("rewrite multipart size: %w", err)
+			}
+			sizeWritten = true
+			_ = part.Close()
+			continue
+		}
 		if _, err := io.Copy(target, part); err != nil {
 			_ = part.Close()
 			return nil, "", fmt.Errorf("copy multipart part: %w", err)
@@ -834,6 +932,11 @@ func rewriteOpenAIImagesMultipartModel(body []byte, contentType string, model st
 	if !modelWritten {
 		if err := writer.WriteField("model", model); err != nil {
 			return nil, "", fmt.Errorf("append multipart model field: %w", err)
+		}
+	}
+	if !sizeWritten {
+		if err := writer.WriteField("size", size); err != nil {
+			return nil, "", fmt.Errorf("append multipart size field: %w", err)
 		}
 	}
 	if err := writer.Close(); err != nil {
@@ -852,6 +955,30 @@ func cloneMultipartHeader(src textproto.MIMEHeader) textproto.MIMEHeader {
 	return dst
 }
 
+func newOpenAIImagesTransientFailoverError(statusCode int, message string, retryableOnSameAccount bool) *UpstreamFailoverError {
+	message = strings.TrimSpace(sanitizeUpstreamErrorMessage(message))
+	if message == "" {
+		message = "Upstream request failed"
+	}
+	body := buildOpenAIImagesUpstreamErrorBody("upstream_error", message)
+	return &UpstreamFailoverError{
+		StatusCode:             statusCode,
+		ResponseBody:           body,
+		RetryableOnSameAccount: retryableOnSameAccount,
+	}
+}
+
+func buildOpenAIImagesUpstreamErrorBody(errorType string, message string) []byte {
+	errorType = strings.TrimSpace(errorType)
+	if errorType == "" {
+		errorType = "upstream_error"
+	}
+	body := []byte(`{"type":"error","error":{"type":"","message":""}}`)
+	body, _ = sjson.SetBytes(body, "error.type", errorType)
+	body, _ = sjson.SetBytes(body, "error.message", strings.TrimSpace(message))
+	return body
+}
+
 func (s *OpenAIGatewayService) handleOpenAIImagesNonStreamingResponse(resp *http.Response, c *gin.Context) (OpenAIUsage, int, []string, error) {
 	body, err := ReadUpstreamResponseBody(resp.Body, s.cfg, c, openAITooLargeError)
 	if err != nil {
@@ -868,6 +995,19 @@ func (s *OpenAIGatewayService) handleOpenAIImagesNonStreamingResponse(resp *http
 
 	usage, _ := extractOpenAIUsageFromJSONBytes(body)
 	return usage, extractOpenAIImageCountFromJSONBytes(body), collectOpenAIResponseImageOutputSizesFromJSONBytes(body), nil
+}
+
+func isOpenAIImagesTransientOutputError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(strings.TrimSpace(err.Error()))
+	if msg == "" {
+		return false
+	}
+	return strings.Contains(msg, "upstream did not return image output") ||
+		strings.Contains(msg, "stream id") && strings.Contains(msg, "internal_error") ||
+		strings.Contains(msg, "internal_error") && strings.Contains(msg, "received from peer")
 }
 
 func (s *OpenAIGatewayService) handleOpenAIImagesStreamingResponse(

@@ -270,7 +270,7 @@ func buildOpenAIImagesResponsesRequest(parsed *OpenAIImagesRequest, toolModel st
 		path  string
 		value string
 	}{
-		{path: "size", value: parsed.Size},
+		{path: "size", value: normalizeOpenAIImageUpstreamSize(parsed.Size)},
 		{path: "quality", value: parsed.Quality},
 		{path: "background", value: parsed.Background},
 		{path: "output_format", value: parsed.OutputFormat},
@@ -1005,7 +1005,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 			Kind:               "request_error",
 			Message:            safeErr,
 		})
-		return nil, fmt.Errorf("upstream request failed: %s", safeErr)
+		return nil, newOpenAIImagesTransientFailoverError(http.StatusBadGateway, safeErr, true)
 	}
 	if resp.StatusCode >= 400 {
 		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
@@ -1065,6 +1065,9 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 	} else {
 		usage, imageCount, imageOutputSizes, err = s.handleOpenAIImagesOAuthNonStreamingResponse(resp, c, parsed.ResponseFormat, requestModel)
 		if err != nil {
+			if isOpenAIImagesTransientOutputError(err) {
+				return nil, newOpenAIImagesTransientFailoverError(http.StatusBadGateway, err.Error(), true)
+			}
 			return nil, err
 		}
 	}
