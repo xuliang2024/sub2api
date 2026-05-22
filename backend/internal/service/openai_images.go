@@ -979,6 +979,40 @@ func buildOpenAIImagesUpstreamErrorBody(errorType string, message string) []byte
 	return body
 }
 
+func MapOpenAIImagesUpstreamErrorForClient(upstreamStatus int, upstreamMsg string) (int, string, string, bool) {
+	msg := strings.TrimSpace(upstreamMsg)
+	if msg == "" {
+		return 0, "", "", false
+	}
+
+	lowerMsg := strings.ToLower(msg)
+	if strings.Contains(lowerMsg, "while downloading") {
+		return http.StatusBadRequest, "image_download_failed", msg, true
+	}
+
+	if upstreamStatus == http.StatusUnauthorized {
+		return http.StatusBadGateway, "upstream_error", "Upstream authentication failed, please contact administrator", true
+	}
+	if upstreamStatus == http.StatusForbidden {
+		return http.StatusBadGateway, "upstream_error", "Upstream access forbidden, please contact administrator", true
+	}
+	if upstreamStatus == http.StatusTooManyRequests {
+		return http.StatusTooManyRequests, "rate_limit_error", msg, true
+	}
+
+	if upstreamStatus >= http.StatusBadRequest && upstreamStatus < http.StatusInternalServerError {
+		return upstreamStatus, "invalid_request_error", msg, true
+	}
+
+	statusCode := http.StatusBadGateway
+	errType := "upstream_error"
+	if upstreamStatus == http.StatusTooManyRequests {
+		statusCode = http.StatusTooManyRequests
+		errType = "rate_limit_error"
+	}
+	return statusCode, errType, msg, true
+}
+
 func (s *OpenAIGatewayService) handleOpenAIImagesNonStreamingResponse(resp *http.Response, c *gin.Context) (OpenAIUsage, int, []string, error) {
 	body, err := ReadUpstreamResponseBody(resp.Body, s.cfg, c, openAITooLargeError)
 	if err != nil {

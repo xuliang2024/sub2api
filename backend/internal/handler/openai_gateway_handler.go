@@ -1659,32 +1659,7 @@ func (h *OpenAIGatewayHandler) mapOpenAIImagesFailoverError(c *gin.Context, upst
 		return 0, "", "", false
 	}
 
-	msg := strings.TrimSpace(upstreamMsg)
-	if msg == "" {
-		return 0, "", "", false
-	}
-
-	lowerMsg := strings.ToLower(msg)
-	if strings.Contains(lowerMsg, "while downloading") {
-		return http.StatusBadRequest, "image_download_failed", msg, true
-	}
-
-	if upstreamStatus == http.StatusUnauthorized || upstreamStatus == http.StatusForbidden {
-		status, errType, errMsg := h.mapUpstreamError(upstreamStatus)
-		return status, errType, errMsg, true
-	}
-
-	if upstreamStatus == http.StatusTooManyRequests {
-		status, errType, _ := h.mapUpstreamError(upstreamStatus)
-		return status, errType, msg, true
-	}
-
-	if upstreamStatus >= http.StatusBadRequest && upstreamStatus < http.StatusInternalServerError {
-		return upstreamStatus, "invalid_request_error", msg, true
-	}
-
-	status, errType, _ := h.mapUpstreamError(upstreamStatus)
-	return status, errType, msg, true
+	return service.MapOpenAIImagesUpstreamErrorForClient(upstreamStatus, upstreamMsg)
 }
 
 // handleFailoverExhaustedSimple 简化版本，用于没有响应体的情况

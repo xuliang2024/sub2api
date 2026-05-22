@@ -4102,6 +4102,16 @@ func (s *OpenAIGatewayService) handleErrorResponse(
 		}
 	}
 
+	if statusCode, errType, errMsg, ok := mapOpenAIImagesHTTPErrorForClient(c, resp.StatusCode, upstreamMsg); ok {
+		c.JSON(statusCode, gin.H{
+			"error": gin.H{
+				"type":    errType,
+				"message": errMsg,
+			},
+		})
+		return nil, fmt.Errorf("upstream error: %d message=%s", resp.StatusCode, upstreamMsg)
+	}
+
 	// Return appropriate error response
 	var errType, errMsg string
 	var statusCode int
@@ -4140,6 +4150,16 @@ func (s *OpenAIGatewayService) handleErrorResponse(
 		return nil, fmt.Errorf("upstream error: %d", resp.StatusCode)
 	}
 	return nil, fmt.Errorf("upstream error: %d message=%s", resp.StatusCode, upstreamMsg)
+}
+
+func mapOpenAIImagesHTTPErrorForClient(c *gin.Context, upstreamStatus int, upstreamMsg string) (int, string, string, bool) {
+	if c == nil || c.Request == nil || c.Request.URL == nil {
+		return 0, "", "", false
+	}
+	if normalizeOpenAIImagesEndpointPath(c.Request.URL.Path) == "" {
+		return 0, "", "", false
+	}
+	return MapOpenAIImagesUpstreamErrorForClient(upstreamStatus, upstreamMsg)
 }
 
 // compatErrorWriter is the signature for format-specific error writers used by
