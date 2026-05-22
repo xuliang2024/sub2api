@@ -132,6 +132,68 @@ func TestOpenAIHandleStreamingAwareError_NonStreaming(t *testing.T) {
 	assert.Equal(t, "test error", errorObj["message"])
 }
 
+func TestOpenAIHandleFailoverExhausted_ImagesPreservesDownloadError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/edits", nil)
+
+	const upstreamMessage = "Error while downloading https://p3-bot-workflow-sign.byteimg.com/input.jpg. Upstream status code: 403."
+	failoverErr := &service.UpstreamFailoverError{
+		StatusCode:   http.StatusBadRequest,
+		ResponseBody: []byte(`{"type":"error","error":{"type":"upstream_error","message":"` + upstreamMessage + `"}}`),
+	}
+
+	h := &OpenAIGatewayHandler{}
+	h.handleFailoverExhausted(c, failoverErr, false)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	body := w.Body.Bytes()
+	assert.Equal(t, "image_download_failed", gjson.GetBytes(body, "error.type").String())
+	assert.Equal(t, upstreamMessage, gjson.GetBytes(body, "error.message").String())
+}
+
+func TestOpenAIHandleFailoverExhausted_ImagesPreservesTransientOutputError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", nil)
+
+	const upstreamMessage = "upstream did not return image output"
+	failoverErr := &service.UpstreamFailoverError{
+		StatusCode:   http.StatusBadGateway,
+		ResponseBody: []byte(`{"type":"error","error":{"type":"upstream_error","message":"` + upstreamMessage + `"}}`),
+	}
+
+	h := &OpenAIGatewayHandler{}
+	h.handleFailoverExhausted(c, failoverErr, false)
+
+	require.Equal(t, http.StatusBadGateway, w.Code)
+	body := w.Body.Bytes()
+	assert.Equal(t, "upstream_error", gjson.GetBytes(body, "error.type").String())
+	assert.Equal(t, upstreamMessage, gjson.GetBytes(body, "error.message").String())
+}
+
+func TestOpenAIHandleFailoverExhausted_NonImagesKeepsGenericMapping(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
+
+	failoverErr := &service.UpstreamFailoverError{
+		StatusCode:   http.StatusBadRequest,
+		ResponseBody: []byte(`{"type":"error","error":{"type":"upstream_error","message":"Error while downloading https://example.com/input.png. Upstream status code: 403."}}`),
+	}
+
+	h := &OpenAIGatewayHandler{}
+	h.handleFailoverExhausted(c, failoverErr, false)
+
+	require.Equal(t, http.StatusBadGateway, w.Code)
+	body := w.Body.Bytes()
+	assert.Equal(t, "upstream_error", gjson.GetBytes(body, "error.type").String())
+	assert.Equal(t, "Upstream request failed", gjson.GetBytes(body, "error.message").String())
+}
+
 func TestReadRequestBodyWithPrealloc(t *testing.T) {
 	payload := `{"model":"gpt-5","input":"hello"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(payload))

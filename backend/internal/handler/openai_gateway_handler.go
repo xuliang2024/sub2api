@@ -1643,9 +1643,48 @@ func (h *OpenAIGatewayHandler) handleFailoverExhausted(c *gin.Context, failoverE
 	upstreamMsg := service.ExtractUpstreamErrorMessage(responseBody)
 	service.SetOpsUpstreamError(c, statusCode, upstreamMsg, "")
 
+	if status, errType, errMsg, ok := h.mapOpenAIImagesFailoverError(c, statusCode, upstreamMsg); ok {
+		h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
+		return
+	}
+
 	// 使用默认的错误映射
 	status, errType, errMsg := h.mapUpstreamError(statusCode)
 	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
+}
+
+func (h *OpenAIGatewayHandler) mapOpenAIImagesFailoverError(c *gin.Context, upstreamStatus int, upstreamMsg string) (int, string, string, bool) {
+	inboundEndpoint := GetInboundEndpoint(c)
+	if inboundEndpoint != EndpointImagesGenerations && inboundEndpoint != EndpointImagesEdits {
+		return 0, "", "", false
+	}
+
+	msg := strings.TrimSpace(upstreamMsg)
+	if msg == "" {
+		return 0, "", "", false
+	}
+
+	lowerMsg := strings.ToLower(msg)
+	if strings.Contains(lowerMsg, "while downloading") {
+		return http.StatusBadRequest, "image_download_failed", msg, true
+	}
+
+	if upstreamStatus == http.StatusUnauthorized || upstreamStatus == http.StatusForbidden {
+		status, errType, errMsg := h.mapUpstreamError(upstreamStatus)
+		return status, errType, errMsg, true
+	}
+
+	if upstreamStatus == http.StatusTooManyRequests {
+		status, errType, _ := h.mapUpstreamError(upstreamStatus)
+		return status, errType, msg, true
+	}
+
+	if upstreamStatus >= http.StatusBadRequest && upstreamStatus < http.StatusInternalServerError {
+		return upstreamStatus, "invalid_request_error", msg, true
+	}
+
+	status, errType, _ := h.mapUpstreamError(upstreamStatus)
+	return status, errType, msg, true
 }
 
 // handleFailoverExhaustedSimple 简化版本，用于没有响应体的情况
