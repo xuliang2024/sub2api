@@ -137,6 +137,7 @@ docs/*
 !docs/PAYMENT_CN.md
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
 !docs/APIZ_DEPLOYMENT_CN.md
+!docs/CODEX_APIZ_IMAGE_API_CN.md
 .serena/
 .codex/
 frontend/coverage/
