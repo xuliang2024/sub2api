@@ -549,34 +549,36 @@ func TestAPIContracts(t *testing.T) {
 				"message": "success",
 				"data": {
 					"items": [
-						{
-							"id": 1,
-							"user_id": 1,
-							"api_key_id": 100,
-							"account_id": 200,
+							{
+								"id": 1,
+								"user_id": 1,
+								"api_key_id": 100,
+								"account_id": 200,
 								"request_id": "req_123",
 								"model": "claude-3",
 								"request_type": "stream",
 								"openai_ws_mode": false,
 								"group_id": null,
 								"subscription_id": null,
-							"input_tokens": 10,
-							"output_tokens": 20,
-							"cache_creation_tokens": 1,
-							"cache_read_tokens": 2,
-							"cache_creation_5m_tokens": 0,
-							"cache_creation_1h_tokens": 0,
-							"input_cost": 0,
-							"output_cost": 0,
-							"cache_creation_cost": 0,
-							"cache_read_cost": 0,
-						"total_cost": 0.5,
-						"actual_cost": 0.5,
-						"rate_multiplier": 1,
-						"billing_type": 0,
-							"stream": true,
-							"duration_ms": 100,
-							"first_token_ms": 50,
+								"input_tokens": 10,
+								"output_tokens": 20,
+								"cache_creation_tokens": 1,
+								"cache_read_tokens": 2,
+								"cache_creation_5m_tokens": 0,
+								"cache_creation_1h_tokens": 0,
+								"input_cost": 0,
+								"output_cost": 0,
+								"cache_creation_cost": 0,
+								"cache_read_cost": 0,
+								"image_output_tokens": 0,
+								"image_output_cost": 0,
+								"total_cost": 0.5,
+								"actual_cost": 0.5,
+								"rate_multiplier": 1,
+								"billing_type": 0,
+								"stream": true,
+								"duration_ms": 100,
+								"first_token_ms": 50,
 							"image_count": 0,
 							"image_size": null,
 							"image_input_size": null,
@@ -757,6 +759,7 @@ func TestAPIContracts(t *testing.T) {
 						"site_logo": "",
 						"site_subtitle": "Subtitle",
 						"api_base_url": "https://api.example.com",
+						"api_key_acl_trust_forwarded_ip": false,
 					"contact_info": "support",
 					"doc_url": "https://docs.example.com",
 					"auth_source_default_email_balance": 0,
@@ -862,6 +865,7 @@ func TestAPIContracts(t *testing.T) {
 					"payment_alipay_force_qrcode": false,
 					"balance_low_notify_enabled": false,
 					"account_quota_notify_enabled": false,
+					"subscription_expiry_notify_enabled": true,
 					"balance_low_notify_threshold": 0,
 					"balance_low_notify_recharge_url": "",
 					"account_quota_notify_emails": [],
@@ -1014,6 +1018,7 @@ func TestAPIContracts(t *testing.T) {
 					"site_logo": "",
 					"site_subtitle": "Subscription to API Conversion Platform",
 					"api_base_url": "",
+					"api_key_acl_trust_forwarded_ip": false,
 					"contact_info": "",
 					"doc_url": "",
 					"home_content": "",
@@ -1086,6 +1091,7 @@ func TestAPIContracts(t *testing.T) {
 					"payment_alipay_force_qrcode": false,
 					"balance_low_notify_enabled": false,
 					"account_quota_notify_enabled": false,
+					"subscription_expiry_notify_enabled": true,
 					"balance_low_notify_threshold": 0,
 					"balance_low_notify_recharge_url": "",
 					"account_quota_notify_emails": [],
@@ -1254,7 +1260,7 @@ func newContractDeps(t *testing.T) *contractDeps {
 	settingRepo := newStubSettingRepo()
 	settingService := service.NewSettingService(settingRepo, cfg)
 
-	adminService := service.NewAdminService(userRepo, groupRepo, &accountRepo, proxyRepo, apiKeyRepo, redeemRepo, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	adminService := service.NewAdminService(userRepo, groupRepo, &accountRepo, proxyRepo, apiKeyRepo, redeemRepo, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	authHandler := handler.NewAuthHandler(cfg, nil, userService, settingService, nil, redeemService, nil, nil)
 	apiKeyHandler := handler.NewAPIKeyHandler(apiKeyService)
 	usageHandler := handler.NewUsageHandler(usageService, apiKeyService)
@@ -1847,6 +1853,10 @@ func (stubRedeemCodeRepo) GetByCode(ctx context.Context, code string) (*service.
 
 func (stubRedeemCodeRepo) Update(ctx context.Context, code *service.RedeemCode) error {
 	return errors.New("not implemented")
+}
+
+func (stubRedeemCodeRepo) BatchUpdate(ctx context.Context, ids []int64, fields service.RedeemCodeBatchUpdateFields) (int64, error) {
+	return int64(len(ids)), nil
 }
 
 func (stubRedeemCodeRepo) Delete(ctx context.Context, id int64) error {

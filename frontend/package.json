@@ -138,5 +138,10 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     }
+  },
+  "pnpm": {
+    "overrides": {
+      "js-cookie": "3.0.7"
+    }
   }
 }
