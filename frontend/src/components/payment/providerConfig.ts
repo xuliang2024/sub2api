@@ -129,8 +129,8 @@ export const PROVIDER_CONFIG_FIELDS: Record<string, ConfigFieldDef[]> = {
     { key: 'privateKey', label: '', sensitive: true },
     { key: 'apiV3Key', label: '', sensitive: true },
     { key: 'certSerial', label: '', sensitive: false },
-    { key: 'publicKey', label: '', sensitive: true },
-    { key: 'publicKeyId', label: '', sensitive: false },
+    { key: 'publicKey', label: '', sensitive: true, optional: true },
+    { key: 'publicKeyId', label: '', sensitive: false, optional: true },
   ],
   stripe: [
     { key: 'secretKey', label: '', sensitive: true },

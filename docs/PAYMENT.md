@@ -140,9 +140,13 @@ Direct integration with WeChat Pay APIv3. Supports Native QR code payment, H5 pa
 | **Merchant ID (MchID)** | WeChat Pay merchant ID | Yes |
 | **Merchant API Private Key** | Merchant API private key (PEM format) | Yes |
 | **APIv3 Key** | 32-byte APIv3 key | Yes |
-| **WeChat Pay Public Key** | WeChat Pay public key (PEM format) | Yes |
-| **WeChat Pay Public Key ID** | WeChat Pay public key ID | Yes |
 | **Certificate Serial Number** | Merchant certificate serial number | Yes |
+| **WeChat Pay Public Key** | WeChat Pay public key (PEM format); leave empty to use automatic platform-certificate mode | No |
+| **WeChat Pay Public Key ID** | WeChat Pay public key ID; must be filled together with the public key | No |
+
+> WeChat Pay direct supports two verification modes:
+> 1. **WeChat Pay public-key mode**: fill both `WeChat Pay Public Key` and `WeChat Pay Public Key ID`; recommended for newly provisioned merchants.
+> 2. **Automatic platform-certificate mode**: leave both public-key fields empty. The system uses AppID, MchID, merchant private key, merchant certificate serial, and APIv3 key to download and refresh WeChat Pay platform certificates automatically. This is compatible with older systems that only store the merchant private key, merchant certificate serial, and APIv3 key. The two public-key fields must be both filled or both empty.
 
 ### Stripe
 

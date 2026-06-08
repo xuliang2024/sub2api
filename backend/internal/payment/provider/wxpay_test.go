@@ -273,16 +273,21 @@ func TestNewWxpay(t *testing.T) {
 			errSubstr: "certSerial",
 		},
 		{
-			name:      "missing publicKey",
-			config:    withOverride(map[string]string{"publicKey": ""}),
-			wantErr:   true,
-			errSubstr: "publicKey",
+			name:    "platform certificate mode succeeds without public key",
+			config:  withOverride(map[string]string{"publicKey": "", "publicKeyId": ""}),
+			wantErr: false,
 		},
 		{
-			name:      "missing publicKeyId",
+			name:      "publicKey without publicKeyId",
 			config:    withOverride(map[string]string{"publicKeyId": ""}),
 			wantErr:   true,
-			errSubstr: "publicKeyId",
+			errSubstr: "publicKey/publicKeyId",
+		},
+		{
+			name:      "publicKeyId without publicKey",
+			config:    withOverride(map[string]string{"publicKey": ""}),
+			wantErr:   true,
+			errSubstr: "publicKey/publicKeyId",
 		},
 		{
 			name:      "malformed privateKey PEM",
