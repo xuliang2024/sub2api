@@ -63,6 +63,7 @@ export interface CheckoutInfoResponse {
   global_min: number
   global_max: number
   plans: SubscriptionPlan[]
+  recharge_packages: RechargePackage[]
   balance_disabled: boolean
   balance_recharge_multiplier: number
   recharge_fee_rate: number
@@ -71,6 +72,15 @@ export interface CheckoutInfoResponse {
   stripe_publishable_key: string
   /** When true, Alipay payments on mobile always show the QR code instead of redirecting */
   alipay_force_qrcode?: boolean
+}
+
+export interface RechargePackage {
+  id: string
+  name: string
+  pay_amount: number
+  credit_amount: number
+  validity_days: number
+  sort_order: number
 }
 
 // ==================== Orders ====================
@@ -158,6 +168,7 @@ export interface CreateOrderRequest {
   payment_type: string
   order_type: string
   plan_id?: number
+  recharge_package_id?: string
   return_url?: string
   payment_source?: string
   openid?: string

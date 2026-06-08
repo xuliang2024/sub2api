@@ -41,6 +41,27 @@
               <p class="text-gray-500 dark:text-gray-400">{{ t('payment.notAvailable') }}</p>
             </div>
             <template v-else>
+            <div v-if="sortedRechargePackages.length > 0" class="card p-6">
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  v-for="pkg in sortedRechargePackages"
+                  :key="pkg.id"
+                  type="button"
+                  class="rounded-lg border px-4 py-3 text-left transition-colors"
+                  :class="selectedRechargePackageId === pkg.id ? 'border-primary-500 bg-primary-50 dark:border-primary-400 dark:bg-primary-950/30' : 'border-gray-200 hover:border-primary-300 dark:border-dark-600 dark:hover:border-primary-500'"
+                  @click="selectRechargePackage(pkg)"
+                >
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ pkg.name }}</span>
+                    <span class="text-sm font-bold text-primary-600 dark:text-primary-400">${{ pkg.credit_amount.toFixed(2) }}</span>
+                  </div>
+                  <div class="mt-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <span>{{ formatSelectedPaymentAmount(pkg.pay_amount) }}</span>
+                    <span>{{ pkg.validity_days }}{{ t('payment.days') }}</span>
+                  </div>
+                </button>
+              </div>
+            </div>
             <div class="card p-6">
               <AmountInput
                 v-model="amount"
@@ -71,11 +92,18 @@
                   <span class="font-medium text-gray-700 dark:text-gray-300">{{ t('payment.actualPay') }}</span>
                   <span class="text-lg font-bold text-primary-600 dark:text-primary-400">{{ formatSelectedPaymentAmount(totalAmount) }}</span>
                 </div>
-                <div v-if="balanceRechargeMultiplier !== 1" class="flex justify-between" :class="{ 'border-t border-gray-200 pt-2 dark:border-dark-600': feeRate <= 0 }">
+                <div v-if="!selectedRechargePackage && balanceRechargeMultiplier !== 1" class="flex justify-between" :class="{ 'border-t border-gray-200 pt-2 dark:border-dark-600': feeRate <= 0 }">
                   <span class="text-gray-500 dark:text-gray-400">{{ t('payment.creditedBalance') }}</span>
                   <span class="text-gray-900 dark:text-white">${{ creditedAmount.toFixed(2) }}</span>
                 </div>
-                <p v-if="balanceRechargeMultiplier !== 1" class="border-t border-gray-200 pt-2 text-xs text-gray-500 dark:border-dark-600 dark:text-gray-400">
+                <div v-if="selectedRechargePackage" class="flex justify-between" :class="{ 'border-t border-gray-200 pt-2 dark:border-dark-600': feeRate <= 0 }">
+                  <span class="text-gray-500 dark:text-gray-400">{{ t('payment.creditedBalance') }}</span>
+                  <span class="text-gray-900 dark:text-white">${{ selectedRechargePackage.credit_amount.toFixed(2) }}</span>
+                </div>
+                <p v-if="selectedRechargePackage" class="border-t border-gray-200 pt-2 text-xs text-gray-500 dark:border-dark-600 dark:text-gray-400">
+                  {{ selectedRechargePackage.validity_days }}{{ t('payment.days') }}
+                </p>
+                <p v-if="!selectedRechargePackage && balanceRechargeMultiplier !== 1" class="border-t border-gray-200 pt-2 text-xs text-gray-500 dark:border-dark-600 dark:text-gray-400">
                   {{ t('payment.rechargeRatePreview', { usd: balanceRechargeMultiplier.toFixed(2) }) }}
                 </p>
               </div>
@@ -255,7 +283,7 @@ import { useAppStore } from '@/stores'
 import { paymentAPI } from '@/api/payment'
 import { extractApiErrorMessage, extractI18nErrorMessage } from '@/utils/apiError'
 import { isMobileDevice } from '@/utils/device'
-import type { SubscriptionPlan, CheckoutInfoResponse, CreateOrderResult, OrderType } from '@/types/payment'
+import type { RechargePackage, SubscriptionPlan, CheckoutInfoResponse, CreateOrderResult, OrderType } from '@/types/payment'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import AmountInput from '@/components/payment/AmountInput.vue'
 import PaymentMethodSelector from '@/components/payment/PaymentMethodSelector.vue'
@@ -305,6 +333,7 @@ const activeTab = ref<'recharge' | 'subscription'>('recharge')
 const amount = ref<number | null>(null)
 const selectedMethod = ref('')
 const selectedPlan = ref<SubscriptionPlan | null>(null)
+const selectedRechargePackageId = ref('')
 const previewImage = ref('')
 
 const paymentPhase = ref<'select' | 'paying'>('select')
@@ -313,6 +342,7 @@ interface CreateOrderOptions {
   openid?: string
   wechatResumeToken?: string
   paymentType?: string
+  rechargePackageId?: string
   isResume?: boolean
   mobileQrFallbackAttempted?: boolean
 }
@@ -478,7 +508,7 @@ function onPaymentSettled() {
 // All checkout data from single API call
 const checkout = ref<CheckoutInfoResponse>({
   methods: {}, global_min: 0, global_max: 0,
-  plans: [], balance_disabled: false, balance_recharge_multiplier: 1, recharge_fee_rate: 0, help_text: '', help_image_url: '', stripe_publishable_key: '',
+  plans: [], recharge_packages: [], balance_disabled: false, balance_recharge_multiplier: 1, recharge_fee_rate: 0, help_text: '', help_image_url: '', stripe_publishable_key: '',
 })
 
 const tabs = computed(() => {
@@ -495,7 +525,16 @@ const balanceRechargeMultiplier = computed(() => {
   const multiplier = checkout.value.balance_recharge_multiplier
   return multiplier > 0 ? multiplier : 1
 })
-const creditedAmount = computed(() => Math.round((validAmount.value * balanceRechargeMultiplier.value) * 100) / 100)
+const sortedRechargePackages = computed(() =>
+  [...(checkout.value.recharge_packages || [])].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+)
+const selectedRechargePackage = computed(() =>
+  sortedRechargePackages.value.find(pkg => pkg.id === selectedRechargePackageId.value) || null
+)
+const creditedAmount = computed(() => {
+  if (selectedRechargePackage.value) return selectedRechargePackage.value.credit_amount
+  return Math.round((validAmount.value * balanceRechargeMultiplier.value) * 100) / 100
+})
 
 // Adaptive grid: center single card, 2-col for 2 plans, 3-col for 3+
 const planGridClass = computed(() => {
@@ -626,6 +665,14 @@ watch(() => [validAmount.value, selectedMethod.value] as const, ([amt, method]) 
   if (available) selectedMethod.value = available
 })
 
+watch(amount, (next) => {
+  const pkg = selectedRechargePackage.value
+  if (!pkg) return
+  if (next !== pkg.pay_amount) {
+    selectedRechargePackageId.value = ''
+  }
+})
+
 // Payment button class: follows selected payment method color
 const paymentButtonClass = computed(() => {
   const m = selectedMethod.value
@@ -674,9 +721,15 @@ function closeRenewalModal() {
   renewGroupId.value = null
 }
 
+function selectRechargePackage(pkg: RechargePackage) {
+  selectedRechargePackageId.value = pkg.id
+  amount.value = pkg.pay_amount
+  errorMessage.value = ''
+}
+
 async function handleSubmitRecharge() {
   if (!canSubmit.value || submitting.value) return
-  await createOrder(validAmount.value, 'balance')
+  await createOrder(validAmount.value, 'balance', undefined, { rechargePackageId: selectedRechargePackage.value?.id })
 }
 
 async function confirmSubscribe() {
@@ -695,6 +748,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
       paymentType: requestType,
       orderType,
       planId,
+      rechargePackageId: options.rechargePackageId,
       origin: typeof window !== 'undefined' ? window.location.origin : '',
       isMobile: isMobileDevice(),
       isWechatBrowser: typeof window !== 'undefined' && /MicroMessenger/i.test(window.navigator.userAgent),
@@ -798,6 +852,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
               orderAmount,
               orderType,
               planId,
+              rechargePackageId: options.rechargePackageId,
               paymentType: visibleMethod,
               attempted: options.mobileQrFallbackAttempted === true,
             },
@@ -816,6 +871,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
           orderAmount,
           orderType,
           planId,
+          rechargePackageId: options.rechargePackageId,
           paymentType: visibleMethod,
           attempted: options.mobileQrFallbackAttempted === true,
         })
@@ -845,6 +901,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
       orderAmount,
       orderType,
       planId,
+      rechargePackageId: options.rechargePackageId,
       paymentType: requestType,
       attempted: options.mobileQrFallbackAttempted === true,
     })) {
@@ -872,6 +929,7 @@ interface MobileQrFallbackContext {
   orderAmount: number
   orderType: OrderType
   planId?: number
+  rechargePackageId?: string
   paymentType: string
   attempted: boolean
 }
@@ -921,6 +979,7 @@ async function attemptMobileQrFallback(err: unknown, context: MobileQrFallbackCo
       paymentType: visibleMethod,
       orderType: context.orderType,
       planId: context.planId,
+      rechargePackageId: context.rechargePackageId,
       origin: typeof window !== 'undefined' ? window.location.origin : '',
       isMobile: false,
       isWechatBrowser: false,

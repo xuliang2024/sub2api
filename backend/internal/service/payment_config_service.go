@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
@@ -29,6 +30,7 @@ const (
 	SettingProductNameSuffix   = "PRODUCT_NAME_SUFFIX"
 	SettingHelpImageURL        = "PAYMENT_HELP_IMAGE_URL"
 	SettingHelpText            = "PAYMENT_HELP_TEXT"
+	SettingRechargePackages    = "payment_recharge_packages"
 	SettingCancelRateLimitOn   = "CANCEL_RATE_LIMIT_ENABLED"
 	SettingCancelRateLimitMax  = "CANCEL_RATE_LIMIT_MAX"
 	SettingCancelWindowSize    = "CANCEL_RATE_LIMIT_WINDOW"
@@ -45,22 +47,23 @@ const (
 
 // PaymentConfig holds the payment system configuration.
 type PaymentConfig struct {
-	Enabled                   bool     `json:"enabled"`
-	MinAmount                 float64  `json:"min_amount"`
-	MaxAmount                 float64  `json:"max_amount"`
-	DailyLimit                float64  `json:"daily_limit"`
-	OrderTimeoutMin           int      `json:"order_timeout_minutes"`
-	MaxPendingOrders          int      `json:"max_pending_orders"`
-	EnabledTypes              []string `json:"enabled_payment_types"`
-	BalanceDisabled           bool     `json:"balance_disabled"`
-	BalanceRechargeMultiplier float64  `json:"balance_recharge_multiplier"`
-	RechargeFeeRate           float64  `json:"recharge_fee_rate"`
-	LoadBalanceStrategy       string   `json:"load_balance_strategy"`
-	ProductNamePrefix         string   `json:"product_name_prefix"`
-	ProductNameSuffix         string   `json:"product_name_suffix"`
-	HelpImageURL              string   `json:"help_image_url"`
-	HelpText                  string   `json:"help_text"`
-	StripePublishableKey      string   `json:"stripe_publishable_key,omitempty"`
+	Enabled                   bool              `json:"enabled"`
+	MinAmount                 float64           `json:"min_amount"`
+	MaxAmount                 float64           `json:"max_amount"`
+	DailyLimit                float64           `json:"daily_limit"`
+	OrderTimeoutMin           int               `json:"order_timeout_minutes"`
+	MaxPendingOrders          int               `json:"max_pending_orders"`
+	EnabledTypes              []string          `json:"enabled_payment_types"`
+	BalanceDisabled           bool              `json:"balance_disabled"`
+	BalanceRechargeMultiplier float64           `json:"balance_recharge_multiplier"`
+	RechargeFeeRate           float64           `json:"recharge_fee_rate"`
+	LoadBalanceStrategy       string            `json:"load_balance_strategy"`
+	ProductNamePrefix         string            `json:"product_name_prefix"`
+	ProductNameSuffix         string            `json:"product_name_suffix"`
+	HelpImageURL              string            `json:"help_image_url"`
+	HelpText                  string            `json:"help_text"`
+	StripePublishableKey      string            `json:"stripe_publishable_key,omitempty"`
+	RechargePackages          []RechargePackage `json:"recharge_packages"`
 
 	// Cancel rate limit settings
 	CancelRateLimitEnabled bool   `json:"cancel_rate_limit_enabled"`
@@ -71,6 +74,17 @@ type PaymentConfig struct {
 
 	// Force Alipay mobile users to use QR code instead of mobile redirect
 	AlipayForceQRCode bool `json:"alipay_force_qrcode"`
+}
+
+// RechargePackage describes a balance top-up package. PayAmount is charged by
+// the provider; CreditAmount is the USD balance credited after payment.
+type RechargePackage struct {
+	ID           string  `json:"id"`
+	Name         string  `json:"name"`
+	PayAmount    float64 `json:"pay_amount"`
+	CreditAmount float64 `json:"credit_amount"`
+	ValidityDays int     `json:"validity_days"`
+	SortOrder    int     `json:"sort_order"`
 }
 
 // UpdatePaymentConfigRequest contains fields to update payment configuration.
@@ -206,7 +220,7 @@ func (s *PaymentConfigService) GetPaymentConfig(ctx context.Context) (*PaymentCo
 		SettingDailyRechargeLimit, SettingOrderTimeoutMinutes, SettingMaxPendingOrders,
 		SettingEnabledPaymentTypes, SettingBalancePayDisabled, SettingBalanceRechargeMult, SettingRechargeFeeRate, SettingLoadBalanceStrategy,
 		SettingProductNamePrefix, SettingProductNameSuffix,
-		SettingHelpImageURL, SettingHelpText,
+		SettingHelpImageURL, SettingHelpText, SettingRechargePackages,
 		SettingCancelRateLimitOn, SettingCancelRateLimitMax,
 		SettingCancelWindowSize, SettingCancelWindowUnit, SettingCancelWindowMode,
 		SettingAlipayForceQRCode,
@@ -239,6 +253,7 @@ func (s *PaymentConfigService) parsePaymentConfig(vals map[string]string) *Payme
 		ProductNameSuffix:         vals[SettingProductNameSuffix],
 		HelpImageURL:              vals[SettingHelpImageURL],
 		HelpText:                  vals[SettingHelpText],
+		RechargePackages:          parseRechargePackages(vals[SettingRechargePackages]),
 
 		CancelRateLimitEnabled: vals[SettingCancelRateLimitOn] == "true",
 		CancelRateLimitMax:     pcParseInt(vals[SettingCancelRateLimitMax], 10),
@@ -262,6 +277,48 @@ func (s *PaymentConfigService) parsePaymentConfig(vals map[string]string) *Payme
 		cfg.EnabledTypes = NormalizeVisibleMethods(types)
 	}
 	return cfg
+}
+
+func parseRechargePackages(raw string) []RechargePackage {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var packages []RechargePackage
+	if err := json.Unmarshal([]byte(raw), &packages); err != nil {
+		return nil
+	}
+	out := make([]RechargePackage, 0, len(packages))
+	seen := map[string]bool{}
+	for _, pkg := range packages {
+		pkg.ID = strings.TrimSpace(pkg.ID)
+		pkg.Name = strings.TrimSpace(pkg.Name)
+		if pkg.ID == "" || seen[pkg.ID] || pkg.PayAmount <= 0 || pkg.CreditAmount <= 0 {
+			continue
+		}
+		if pkg.Name == "" {
+			pkg.Name = pkg.ID
+		}
+		if pkg.ValidityDays <= 0 {
+			pkg.ValidityDays = 365
+		}
+		seen[pkg.ID] = true
+		out = append(out, pkg)
+	}
+	return out
+}
+
+func findRechargePackage(packages []RechargePackage, id string) *RechargePackage {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil
+	}
+	for i := range packages {
+		if packages[i].ID == id {
+			return &packages[i]
+		}
+	}
+	return nil
 }
 
 // getStripePublishableKey finds the publishable key from the first enabled Stripe provider instance.
