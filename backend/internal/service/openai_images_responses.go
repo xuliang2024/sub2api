@@ -310,7 +310,7 @@ func buildOpenAIImagesResponsesRequest(parsed *OpenAIImagesRequest, toolModel st
 	req, _ = sjson.SetBytes(req, "model", openAIImagesResponsesMainModel)
 
 	input := []byte(`[{"type":"message","role":"user","content":[{"type":"input_text","text":""}]}]`)
-	input, _ = sjson.SetBytes(input, "0.content.0.text", prompt)
+	input, _ = sjson.SetBytes(input, "0.content.0.text", buildOpenAIImagesPromptWithSizeConstraint(prompt, parsed.Size))
 	for index, imageURL := range inputImages {
 		part := []byte(`{"type":"input_image","image_url":""}`)
 		part, _ = sjson.SetBytes(part, "image_url", imageURL)
@@ -366,6 +366,19 @@ func buildOpenAIImagesResponsesRequest(parsed *OpenAIImagesRequest, toolModel st
 	req, _ = sjson.SetRawBytes(req, "tools", []byte(`[]`))
 	req, _ = sjson.SetRawBytes(req, "tools.-1", tool)
 	return req, nil
+}
+
+func buildOpenAIImagesPromptWithSizeConstraint(prompt string, size string) string {
+	prompt = strings.TrimSpace(prompt)
+	width, height, ok := requestedOpenAIImageDimensions(size)
+	if !ok {
+		return prompt
+	}
+	constraint := fmt.Sprintf("Final image requirement: create the image at exactly %dx%d pixels, with exactly %.6g:%.6g aspect ratio. Do not use a square or automatic canvas.", width, height, float64(width), float64(height))
+	if prompt == "" {
+		return constraint
+	}
+	return prompt + "\n\n" + constraint
 }
 
 func shouldPassOpenAIImagesN(model string, n int) bool {
@@ -724,6 +737,7 @@ func (s *OpenAIGatewayService) handleOpenAIImagesOAuthNonStreamingResponse(
 	c *gin.Context,
 	responseFormat string,
 	fallbackModel string,
+	requestedSize string,
 ) (OpenAIUsage, int, []string, error) {
 	body, err := ReadUpstreamResponseBody(resp.Body, s.cfg, c, openAITooLargeError)
 	if err != nil {
@@ -749,6 +763,10 @@ func (s *OpenAIGatewayService) handleOpenAIImagesOAuthNonStreamingResponse(
 	if strings.TrimSpace(firstMeta.Model) == "" {
 		firstMeta.Model = strings.TrimSpace(fallbackModel)
 	}
+	results = normalizeOpenAIImagesResultDimensions(results, requestedSize)
+	if len(results) > 0 {
+		firstMeta.Size = results[0].Size
+	}
 
 	responseBody, err := buildOpenAIImagesAPIResponse(results, createdAt, usageRaw, firstMeta, responseFormat)
 	if err != nil {
@@ -766,6 +784,7 @@ func (s *OpenAIGatewayService) handleOpenAIImagesOAuthStreamingResponse(
 	responseFormat string,
 	streamPrefix string,
 	fallbackModel string,
+	requestedSize string,
 ) (OpenAIUsage, int, []string, *int, error) {
 	responseheaders.WriteFilteredHeaders(c.Writer.Header(), resp.Header, s.responseHeaderFilter)
 	c.Header("Content-Type", "text/event-stream")
@@ -885,6 +904,7 @@ func (s *OpenAIGatewayService) handleOpenAIImagesOAuthStreamingResponse(
 				processDataDone = true
 				return
 			}
+			finalResults = normalizeOpenAIImagesResultDimensions(finalResults, requestedSize)
 			eventName := streamPrefix + ".completed"
 			for _, img := range finalResults {
 				key := openAIResponsesImageResultKey("", img)
@@ -935,6 +955,7 @@ func (s *OpenAIGatewayService) handleOpenAIImagesOAuthStreamingResponse(
 			return nil
 		}
 		if len(pendingResults) > 0 {
+			pendingResults = normalizeOpenAIImagesResultDimensions(pendingResults, requestedSize)
 			eventName := streamPrefix + ".completed"
 			for _, img := range pendingResults {
 				mergeOpenAIResponsesImageMeta(&img, streamMeta)
@@ -1208,7 +1229,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 		firstTokenMs     *int
 	)
 	if parsed.Stream {
-		usage, imageCount, imageOutputSizes, firstTokenMs, err = s.handleOpenAIImagesOAuthStreamingResponse(resp, c, startTime, parsed.ResponseFormat, openAIImagesStreamPrefix(parsed), requestModel)
+		usage, imageCount, imageOutputSizes, firstTokenMs, err = s.handleOpenAIImagesOAuthStreamingResponse(resp, c, startTime, parsed.ResponseFormat, openAIImagesStreamPrefix(parsed), requestModel, parsed.Size)
 		if err != nil {
 			if imageCount > 0 {
 				return &OpenAIForwardResult{
@@ -1229,7 +1250,7 @@ func (s *OpenAIGatewayService) forwardOpenAIImagesOAuth(
 			return nil, err
 		}
 	} else {
-		usage, imageCount, imageOutputSizes, err = s.handleOpenAIImagesOAuthNonStreamingResponse(resp, c, parsed.ResponseFormat, requestModel)
+		usage, imageCount, imageOutputSizes, err = s.handleOpenAIImagesOAuthNonStreamingResponse(resp, c, parsed.ResponseFormat, requestModel, parsed.Size)
 		if err != nil {
 			if isOpenAIImagesTransientOutputError(err) {
 				return nil, newOpenAIImagesTransientFailoverError(http.StatusBadGateway, err.Error(), true)

@@ -3,7 +3,11 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
+	"image"
+	"image/color"
+	"image/png"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -563,7 +567,9 @@ func TestOpenAIGatewayServiceForwardImages_OAuthPassesNAndReturnsAllImages(t *te
 	require.Equal(t, "1024x1824", gjson.GetBytes(upstream.lastBody, "tools.0.size").String())
 	require.Equal(t, "high", gjson.GetBytes(upstream.lastBody, "tools.0.quality").String())
 	require.Equal(t, int64(3), gjson.GetBytes(upstream.lastBody, "tools.0.n").Int())
-	require.Equal(t, "draw a cat", gjson.GetBytes(upstream.lastBody, "input.0.content.0.text").String())
+	promptText := gjson.GetBytes(upstream.lastBody, "input.0.content.0.text").String()
+	require.Contains(t, promptText, "draw a cat")
+	require.Contains(t, promptText, "exactly 1024x1824 pixels")
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Equal(t, "gpt-image-2", gjson.Get(rec.Body.String(), "model").String())
@@ -1109,7 +1115,9 @@ func TestOpenAIGatewayServiceForwardImages_OAuthEditsMultipartUsesResponsesAPI(t
 	require.Equal(t, "webp", gjson.GetBytes(upstream.lastBody, "tools.0.output_format").String())
 	require.True(t, strings.HasPrefix(gjson.GetBytes(upstream.lastBody, "input.0.content.1.image_url").String(), "data:image/png;base64,"))
 	require.True(t, strings.HasPrefix(gjson.GetBytes(upstream.lastBody, "tools.0.input_image_mask.image_url").String(), "data:image/png;base64,"))
-	require.Equal(t, "replace background with aurora", gjson.GetBytes(upstream.lastBody, "input.0.content.0.text").String())
+	promptText := gjson.GetBytes(upstream.lastBody, "input.0.content.0.text").String()
+	require.Contains(t, promptText, "replace background with aurora")
+	require.NotContains(t, promptText, "Final image requirement")
 	require.Equal(t, "ZWRpdGVk", gjson.Get(rec.Body.String(), "data.0.b64_json").String())
 	require.Equal(t, "replace background with aurora", gjson.Get(rec.Body.String(), "data.0.revised_prompt").String())
 }
@@ -1210,6 +1218,33 @@ func TestBuildOpenAIImagesResponsesRequest_PassesThroughNForMultiImageModels(t *
 	require.Equal(t, int64(2), gjson.GetBytes(body, "tools.0.n").Int())
 	require.Equal(t, "gpt-image-2", gjson.GetBytes(body, "tools.0.model").String())
 	require.Equal(t, "draw a cat", gjson.GetBytes(body, "input.0.content.0.text").String())
+}
+
+func TestNormalizeOpenAIImagesResultDimensions_ResizesToRequestedSize(t *testing.T) {
+	src := image.NewRGBA(image.Rect(0, 0, 32, 32))
+	for y := 0; y < 32; y++ {
+		for x := 0; x < 32; x++ {
+			src.Set(x, y, color.RGBA{R: 220, G: uint8(x * 4), B: uint8(y * 4), A: 255})
+		}
+	}
+	var buf bytes.Buffer
+	require.NoError(t, png.Encode(&buf, src))
+
+	results := normalizeOpenAIImagesResultDimensions([]openAIResponsesImageResult{{
+		Result:       base64.StdEncoding.EncodeToString(buf.Bytes()),
+		OutputFormat: "png",
+		Size:         "auto",
+	}}, "16:9")
+
+	require.Len(t, results, 1)
+	require.Equal(t, "1824x1024", results[0].Size)
+	raw, err := base64.StdEncoding.DecodeString(results[0].Result)
+	require.NoError(t, err)
+	cfg, format, err := image.DecodeConfig(bytes.NewReader(raw))
+	require.NoError(t, err)
+	require.Equal(t, "png", format)
+	require.Equal(t, 1824, cfg.Width)
+	require.Equal(t, 1024, cfg.Height)
 }
 
 func TestBuildOpenAIImagesResponsesRequest_DoesNotPassNForDallE3(t *testing.T) {
