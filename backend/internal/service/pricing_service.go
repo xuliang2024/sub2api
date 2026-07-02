@@ -51,14 +51,6 @@ var (
 		Mode:                    "chat",
 		SupportsPromptCaching:   true,
 	}
-	openAIGPTImage2FallbackPricing = &LiteLLMModelPricing{
-		InputCostPerToken:       5e-06,
-		CacheReadInputTokenCost: 1.25e-06,
-		InputCostPerImageToken:  8e-06,
-		OutputCostPerImageToken: 3e-05,
-		LiteLLMProvider:         "openai",
-		Mode:                    "image_generation",
-	}
 )
 
 // LiteLLMModelPricing LiteLLM价格数据结构
@@ -837,14 +829,6 @@ func (s *PricingService) matchOpenAIModel(model string) *LiteLLMModelPricing {
 	}
 
 	if isOpenAIImageGenerationModel(model) {
-		if strings.HasPrefix(model, "gpt-image-2") {
-			if pricing, ok := s.pricingData["gpt-image-2"]; ok {
-				logger.LegacyPrintf("service.pricing", "[Pricing] OpenAI image fallback matched %s -> %s", model, "gpt-image-2")
-				return pricing
-			}
-			logger.LegacyPrintf("service.pricing", "[Pricing] OpenAI image fallback matched %s -> %s", model, "gpt-image-2(static)")
-			return openAIGPTImage2FallbackPricing
-		}
 		for _, candidate := range []string{"gpt-image-2", "gpt-image-1.5", "gpt-image-1"} {
 			if pricing, ok := s.pricingData[candidate]; ok {
 				logger.LegacyPrintf("service.pricing", "[Pricing] OpenAI image fallback matched %s -> %s", model, candidate)

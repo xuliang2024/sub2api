@@ -124,6 +124,8 @@ CLAUDE.md
 scripts
 !frontend/scripts/
 !frontend/scripts/notarize.cjs
+!backend/scripts/
+!backend/scripts/resolve-version.sh
 .code-review-state
 #openspec/
 code-reviews/
@@ -138,6 +140,8 @@ docs/*
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
 !docs/APIZ_DEPLOYMENT_CN.md
 !docs/CODEX_APIZ_IMAGE_API_CN.md
+!docs/legal/
+!docs/legal/*.md
 .serena/
 .codex/
 frontend/coverage/

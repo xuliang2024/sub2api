@@ -124,9 +124,9 @@ func TestDefaultPricingIncludesCodexAutoReview(t *testing.T) {
 
 	got := svc.GetModelPricing("codex-auto-review")
 	require.NotNil(t, got)
-	require.InDelta(t, 2.5e-6, got.InputCostPerToken, 1e-12)
-	require.InDelta(t, 1.5e-5, got.OutputCostPerToken, 1e-12)
-	require.InDelta(t, 2.5e-7, got.CacheReadInputTokenCost, 1e-12)
+	require.InDelta(t, 5e-6, got.InputCostPerToken, 1e-12)
+	require.InDelta(t, 3e-5, got.OutputCostPerToken, 1e-12)
+	require.InDelta(t, 5e-7, got.CacheReadInputTokenCost, 1e-12)
 }
 
 func TestGetModelPricing_Gpt54MiniUsesDedicatedStaticFallbackWhenRemoteMissing(t *testing.T) {
@@ -172,19 +172,6 @@ func TestGetModelPricing_ImageModelDoesNotFallbackToTextModel(t *testing.T) {
 
 	got := svc.GetModelPricing("gpt-image-3")
 	require.Same(t, imagePricing, got)
-}
-
-func TestGetModelPricing_GPTImage2UsesStaticOfficialPricing(t *testing.T) {
-	svc := &PricingService{
-		pricingData: map[string]*LiteLLMModelPricing{},
-	}
-
-	got := svc.GetModelPricing("gpt-image-2")
-	require.NotNil(t, got)
-	require.InDelta(t, 5e-6, got.InputCostPerToken, 1e-12)
-	require.InDelta(t, 8e-6, got.InputCostPerImageToken, 1e-12)
-	require.InDelta(t, 30e-6, got.OutputCostPerImageToken, 1e-12)
-	require.Equal(t, "image_generation", got.Mode)
 }
 
 func TestParsePricingData_PreservesPriorityAndServiceTierFields(t *testing.T) {
