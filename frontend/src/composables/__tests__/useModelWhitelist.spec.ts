@@ -4,7 +4,7 @@ vi.mock('@/api/admin/accounts', () => ({
   getAntigravityDefaultModelMapping: vi.fn()
 }))
 
-import { buildModelMappingObject, getModelsByPlatform, splitModelMappingObject } from '../useModelWhitelist'
+import { buildModelMappingObject, getModelsByPlatform, getPresetMappingsByPlatform, splitModelMappingObject } from '../useModelWhitelist'
 
 describe('useModelWhitelist', () => {
   it('openai 模型列表包含 GPT-5.4 官方快照', () => {
@@ -40,6 +40,15 @@ describe('useModelWhitelist', () => {
     expect(getModelsByPlatform('antigravity')).toContain('claude-fable-5')
     expect(getModelsByPlatform('claude')).toContain('claude-opus-4-8')
     expect(getModelsByPlatform('antigravity')).toContain('claude-opus-4-8')
+  })
+
+  it('Anthropic preset maps legacy Haiku 3.5 to Haiku 4.5', () => {
+    expect(getPresetMappingsByPlatform('anthropic')).toContainEqual(
+      expect.objectContaining({
+        from: 'claude-3-5-haiku-20241022',
+        to: 'claude-haiku-4-5-20251001'
+      })
+    )
   })
 
   it('gemini 模型列表包含原生生图模型', () => {
