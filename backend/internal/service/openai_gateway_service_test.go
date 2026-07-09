@@ -2309,6 +2309,17 @@ func TestOpenAICompactNonStreamingJSONCanReturnClientSSE(t *testing.T) {
 	require.Contains(t, rec.Body.String(), "event: response.completed")
 	require.Contains(t, rec.Body.String(), `"type":"response.completed"`)
 	require.Contains(t, rec.Body.String(), `"id":"cmp_1"`)
+	dataLine := ""
+	for _, line := range strings.Split(rec.Body.String(), "\n") {
+		if strings.HasPrefix(line, "data: ") {
+			dataLine = strings.TrimPrefix(line, "data: ")
+			break
+		}
+	}
+	require.NotEmpty(t, dataLine)
+	require.Equal(t, "compaction", gjson.Get(dataLine, `response.output.0.type`).String())
+	require.Equal(t, "cmp_1", gjson.Get(dataLine, `response.output.0.id`).String())
+	require.Equal(t, int64(1), gjson.Get(dataLine, `response.output.#`).Int())
 }
 
 func TestOpenAIBuildUpstreamRequestOAuthMessagesBridgeUsesSessionOnly(t *testing.T) {

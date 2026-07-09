@@ -824,11 +824,11 @@ func writeOpenAICompactClientStreamFromJSON(c *gin.Context, statusCode int, body
 	if !shouldReturnOpenAICompactClientStream(c) {
 		return false
 	}
-	payload := body
+	payload := ensureOpenAICompactClientStreamOutputItem(body)
 	if strings.TrimSpace(gjson.GetBytes(body, "type").String()) != "response.completed" {
 		wrapped, err := json.Marshal(map[string]any{
 			"type":     "response.completed",
-			"response": json.RawMessage(body),
+			"response": json.RawMessage(payload),
 		})
 		if err != nil {
 			return false
@@ -840,6 +840,68 @@ func writeOpenAICompactClientStreamFromJSON(c *gin.Context, statusCode int, body
 	header.Set("Cache-Control", "no-cache")
 	c.Data(statusCode, "text/event-stream; charset=utf-8", []byte("event: response.completed\ndata: "+string(payload)+"\n\n"))
 	return true
+}
+
+func ensureOpenAICompactClientStreamOutputItem(body []byte) []byte {
+	if len(bytes.TrimSpace(body)) == 0 {
+		return body
+	}
+
+	responsePrefix := ""
+	if strings.TrimSpace(gjson.GetBytes(body, "type").String()) == "response.completed" {
+		responsePrefix = "response."
+	}
+
+	outputPath := responsePrefix + "output"
+	output := gjson.GetBytes(body, outputPath)
+	if output.IsArray() {
+		count := 0
+		hasCompaction := false
+		output.ForEach(func(_, item gjson.Result) bool {
+			count++
+			if strings.TrimSpace(item.Get("type").String()) == "compaction" {
+				hasCompaction = true
+			}
+			return true
+		})
+		if count == 1 && hasCompaction {
+			return body
+		}
+		if count > 0 {
+			return body
+		}
+	}
+
+	item := map[string]any{
+		"type": "compaction",
+	}
+	for _, field := range []string{
+		"id",
+		"status",
+		"encrypted_content",
+		"summary",
+		"content",
+	} {
+		value := gjson.GetBytes(body, responsePrefix+field)
+		if !value.Exists() || value.Raw == "" || value.Raw == "null" {
+			continue
+		}
+		var decoded any
+		if err := json.Unmarshal([]byte(value.Raw), &decoded); err != nil {
+			continue
+		}
+		item[field] = decoded
+	}
+
+	rawItem, err := json.Marshal([]any{item})
+	if err != nil {
+		return body
+	}
+	updated, err := sjson.SetRawBytes(body, outputPath, rawItem)
+	if err != nil {
+		return body
+	}
+	return updated
 }
 
 func isEventStreamResponse(header http.Header) bool {
