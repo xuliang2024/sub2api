@@ -513,6 +513,8 @@ func convertResponsesToAnthropicTools(tools []ResponsesTool) []AnthropicTool {
 	var out []AnthropicTool
 	for _, t := range tools {
 		switch t.Type {
+		case "namespace":
+			out = append(out, convertResponsesNamespaceToolsToAnthropic(t)...)
 		case "web_search", "google_search", "web_search_20250305":
 			out = append(out, AnthropicTool{
 				Type: "web_search_20250305",
@@ -537,6 +539,30 @@ func convertResponsesToAnthropicTools(tools []ResponsesTool) []AnthropicTool {
 				Name:        t.Name,
 				Description: t.Description,
 				InputSchema: normalizeAnthropicInputSchema(t.Parameters),
+			})
+		}
+	}
+	return out
+}
+
+func convertResponsesNamespaceToolsToAnthropic(namespace ResponsesTool) []AnthropicTool {
+	if len(namespace.Tools) == 0 {
+		return nil
+	}
+	out := make([]AnthropicTool, 0, len(namespace.Tools))
+	for _, child := range namespace.Tools {
+		switch child.Type {
+		case "namespace":
+			out = append(out, convertResponsesNamespaceToolsToAnthropic(child)...)
+		case "function", "custom":
+			name := strings.TrimSpace(child.Name)
+			if name == "" {
+				continue
+			}
+			out = append(out, AnthropicTool{
+				Name:        name,
+				Description: child.Description,
+				InputSchema: normalizeAnthropicInputSchema(child.Parameters),
 			})
 		}
 	}
@@ -609,6 +635,9 @@ func convertResponsesToAnthropicToolChoice(raw json.RawMessage) (json.RawMessage
 		Function struct {
 			Name string `json:"name"`
 		} `json:"function"`
+	}
+	if err := json.Unmarshal(raw, &tc); err == nil && tc.Type == "namespace" {
+		return json.Marshal(map[string]string{"type": "auto"})
 	}
 	if err := json.Unmarshal(raw, &tc); err == nil && tc.Type == "function" {
 		name := strings.TrimSpace(tc.Name)

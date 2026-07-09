@@ -591,6 +591,7 @@ func (h *OpenAIGatewayHandler) normalizeOpenAIResponsesCompactRequest(c *gin.Con
 	if !isCompactRequest {
 		return body, true
 	}
+	service.MarkOpenAICompactClientStream(c, gjson.GetBytes(body, "stream").Bool())
 	if compactSeed := strings.TrimSpace(gjson.GetBytes(body, "prompt_cache_key").String()); compactSeed != "" {
 		c.Set(service.OpenAICompactSessionSeedKeyForTest(), compactSeed)
 	}

@@ -124,6 +124,78 @@ func TestResponsesToAnthropic_MixedToolsProduceValidAnthropicTools(t *testing.T)
 	assert.Empty(t, tools[2].InputSchema)
 }
 
+func TestResponsesToAnthropic_NamespaceToolsAreExpanded(t *testing.T) {
+	body := []byte(`{
+		"model": "claude-opus-4-8",
+		"input": "hello",
+		"tools": [{
+			"type": "namespace",
+			"namespace": "functions",
+			"tools": [
+				{
+					"type": "function",
+					"name": "bash",
+					"description": "Run a shell command",
+					"parameters": {
+						"type": "object",
+						"properties": {
+							"cmd": {"type": "string"}
+						},
+						"required": ["cmd"]
+					}
+				},
+				{
+					"type": "custom",
+					"name": "apply_patch",
+					"description": "Apply a patch"
+				}
+			]
+		}]
+	}`)
+
+	var req ResponsesRequest
+	require.NoError(t, json.Unmarshal(body, &req))
+
+	anthropicReq, err := ResponsesToAnthropicRequest(&req)
+	require.NoError(t, err)
+	require.Len(t, anthropicReq.Tools, 2)
+
+	assert.Empty(t, anthropicReq.Tools[0].Type)
+	assert.Equal(t, "bash", anthropicReq.Tools[0].Name)
+	assert.Equal(t, "Run a shell command", anthropicReq.Tools[0].Description)
+	schema := requireObjectInputSchema(t, anthropicReq.Tools[0].InputSchema)
+	assert.JSONEq(t, `{"cmd":{"type":"string"}}`, string(schema["properties"]))
+	assert.JSONEq(t, `["cmd"]`, string(schema["required"]))
+
+	assert.Empty(t, anthropicReq.Tools[1].Type)
+	assert.Equal(t, "apply_patch", anthropicReq.Tools[1].Name)
+	assert.JSONEq(t, `{"type":"object","properties":{}}`, string(anthropicReq.Tools[1].InputSchema))
+
+	wire, err := json.Marshal(anthropicReq)
+	require.NoError(t, err)
+	assert.NotContains(t, string(wire), `"type":"namespace"`)
+}
+
+func TestResponsesToAnthropic_NamespaceToolChoiceFallsBackToAuto(t *testing.T) {
+	body := []byte(`{
+		"model": "claude-opus-4-8",
+		"input": "hello",
+		"tools": [{
+			"type": "namespace",
+			"name": "functions",
+			"tools": [{"type": "function", "name": "bash"}]
+		}],
+		"tool_choice": {"type": "namespace", "name": "functions"}
+	}`)
+
+	var req ResponsesRequest
+	require.NoError(t, json.Unmarshal(body, &req))
+
+	anthropicReq, err := ResponsesToAnthropicRequest(&req)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"type":"auto"}`, string(anthropicReq.ToolChoice))
+}
+
 func TestResponsesToAnthropic_DefaultToolNormalizesInputSchema(t *testing.T) {
 	tools := convertResponsesToAnthropicTools([]ResponsesTool{{
 		Type: "local_shell",

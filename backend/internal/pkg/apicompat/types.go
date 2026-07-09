@@ -250,9 +250,11 @@ type ResponsesContentPart struct {
 type ResponsesTool struct {
 	Type        string          `json:"type"` // "function" | "web_search" | "local_shell" etc.
 	Name        string          `json:"name,omitempty"`
+	Namespace   string          `json:"namespace,omitempty"`
 	Description string          `json:"description,omitempty"`
 	Parameters  json.RawMessage `json:"parameters,omitempty"`
 	Strict      *bool           `json:"strict,omitempty"`
+	Tools       []ResponsesTool `json:"tools,omitempty"`
 }
 
 // ResponsesResponse is the non-streaming response from POST /v1/responses.

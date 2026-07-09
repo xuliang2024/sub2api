@@ -151,10 +151,18 @@ type AnthropicEventToResponsesState struct {
 
 	// For message output: accumulate text parts
 	ContentIndex int
+	CurrentText  string
 
 	// For function_call: track per-output info
-	CurrentCallID string
-	CurrentName   string
+	CurrentCallID    string
+	CurrentName      string
+	CurrentArguments string
+
+	// For reasoning output: accumulate summary text.
+	CurrentReasoningSummary string
+
+	// Completed output items for the terminal response.completed event.
+	Outputs []ResponsesOutput
 
 	// Usage from message_start / message_delta. InputTokens here follows
 	// Anthropic semantics (excludes cached tokens); they are added back when
@@ -324,6 +332,7 @@ func anthToResHandleContentBlockDelta(evt *AnthropicStreamEvent, state *Anthropi
 		if evt.Delta.Text == "" {
 			return nil
 		}
+		state.CurrentText += evt.Delta.Text
 		return []ResponsesStreamEvent{makeResponsesEvent(state, "response.output_text.delta", &ResponsesStreamEvent{
 			OutputIndex:  state.OutputIndex,
 			ContentIndex: state.ContentIndex,
@@ -335,6 +344,7 @@ func anthToResHandleContentBlockDelta(evt *AnthropicStreamEvent, state *Anthropi
 		if evt.Delta.Thinking == "" {
 			return nil
 		}
+		state.CurrentReasoningSummary += evt.Delta.Thinking
 		return []ResponsesStreamEvent{makeResponsesEvent(state, "response.reasoning_summary_text.delta", &ResponsesStreamEvent{
 			OutputIndex:  state.OutputIndex,
 			SummaryIndex: 0,
@@ -346,6 +356,7 @@ func anthToResHandleContentBlockDelta(evt *AnthropicStreamEvent, state *Anthropi
 		if evt.Delta.PartialJSON == "" {
 			return nil
 		}
+		state.CurrentArguments += evt.Delta.PartialJSON
 		return []ResponsesStreamEvent{makeResponsesEvent(state, "response.function_call_arguments.delta", &ResponsesStreamEvent{
 			OutputIndex: state.OutputIndex,
 			Delta:       evt.Delta.PartialJSON,
@@ -396,6 +407,7 @@ func anthToResHandleContentBlockStop(evt *AnthropicStreamEvent, state *Anthropic
 				OutputIndex:  state.OutputIndex,
 				ContentIndex: state.ContentIndex,
 				ItemID:       state.CurrentItemID,
+				Text:         state.CurrentText,
 			}),
 		}
 	}
@@ -450,22 +462,46 @@ func closeCurrentResponsesItem(state *AnthropicEventToResponsesState) []Response
 
 	itemType := state.CurrentItemType
 	itemID := state.CurrentItemID
+	item := ResponsesOutput{
+		Type:   itemType,
+		ID:     itemID,
+		Status: "completed",
+	}
+	switch itemType {
+	case "message":
+		item.Role = "assistant"
+		item.Content = []ResponsesContentPart{{
+			Type: "output_text",
+			Text: state.CurrentText,
+		}}
+	case "function_call":
+		item.CallID = state.CurrentCallID
+		item.Name = state.CurrentName
+		item.Arguments = state.CurrentArguments
+	case "reasoning":
+		if state.CurrentReasoningSummary != "" {
+			item.Summary = []ResponsesSummary{{
+				Type: "summary_text",
+				Text: state.CurrentReasoningSummary,
+			}}
+		}
+	}
+	state.Outputs = append(state.Outputs, item)
 
 	// Reset
 	state.CurrentItemType = ""
 	state.CurrentItemID = ""
 	state.CurrentCallID = ""
 	state.CurrentName = ""
+	state.CurrentArguments = ""
+	state.CurrentText = ""
+	state.CurrentReasoningSummary = ""
 	state.OutputIndex++
 	state.ContentIndex = 0
 
 	return []ResponsesStreamEvent{makeResponsesEvent(state, "response.output_item.done", &ResponsesStreamEvent{
 		OutputIndex: state.OutputIndex - 1, // Use the index before increment
-		Item: &ResponsesOutput{
-			Type:   itemType,
-			ID:     itemID,
-			Status: "completed",
-		},
+		Item:        &item,
 	})}
 }
 
@@ -515,7 +551,7 @@ func makeResponsesCompletedEvent(
 			Object:            "response",
 			Model:             state.Model,
 			Status:            status,
-			Output:            []ResponsesOutput{}, // Simplified; full output tracking would add complexity
+			Output:            append([]ResponsesOutput(nil), state.Outputs...),
 			Usage:             usage,
 			IncompleteDetails: incompleteDetails,
 		},

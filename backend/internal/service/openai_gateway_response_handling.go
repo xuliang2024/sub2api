@@ -807,7 +807,9 @@ func (s *OpenAIGatewayService) handleNonStreamingResponse(ctx context.Context, r
 		}
 	}
 
-	c.Data(resp.StatusCode, contentType, body)
+	if !writeOpenAICompactClientStreamFromJSON(c, resp.StatusCode, body) {
+		c.Data(resp.StatusCode, contentType, body)
+	}
 
 	return &openaiNonStreamingResult{
 		OpenAIUsage:      usage,
@@ -816,6 +818,28 @@ func (s *OpenAIGatewayService) handleNonStreamingResponse(ctx context.Context, r
 		imageCount:       countOpenAIResponseImageOutputsFromJSONBytes(body),
 		imageOutputSizes: collectOpenAIResponseImageOutputSizesFromJSONBytes(body),
 	}, nil
+}
+
+func writeOpenAICompactClientStreamFromJSON(c *gin.Context, statusCode int, body []byte) bool {
+	if !shouldReturnOpenAICompactClientStream(c) {
+		return false
+	}
+	payload := body
+	if strings.TrimSpace(gjson.GetBytes(body, "type").String()) != "response.completed" {
+		wrapped, err := json.Marshal(map[string]any{
+			"type":     "response.completed",
+			"response": json.RawMessage(body),
+		})
+		if err != nil {
+			return false
+		}
+		payload = wrapped
+	}
+	header := c.Writer.Header()
+	header.Set("Content-Type", "text/event-stream; charset=utf-8")
+	header.Set("Cache-Control", "no-cache")
+	c.Data(statusCode, "text/event-stream; charset=utf-8", []byte("event: response.completed\ndata: "+string(payload)+"\n\n"))
+	return true
 }
 
 func isEventStreamResponse(header http.Header) bool {

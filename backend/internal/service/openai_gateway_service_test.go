@@ -2288,6 +2288,29 @@ func TestOpenAIBuildUpstreamRequestCompactForcesJSONAcceptForOAuth(t *testing.T)
 	require.Equal(t, HTTPUpstreamProfileOpenAI, HTTPUpstreamProfileFromContext(req.Context()))
 }
 
+func TestOpenAICompactNonStreamingJSONCanReturnClientSSE(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses/compact", nil)
+	MarkOpenAICompactClientStream(c, true)
+
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(`{"id":"cmp_1","object":"response","model":"gpt-5.5","status":"completed","output":[],"usage":{"input_tokens":2,"output_tokens":1}}`)),
+	}
+
+	svc := &OpenAIGatewayService{}
+	result, err := svc.handleNonStreamingResponse(context.Background(), resp, c, &Account{ID: 1}, "gpt-5.5", "gpt-5.5")
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Contains(t, rec.Header().Get("Content-Type"), "text/event-stream")
+	require.Contains(t, rec.Body.String(), "event: response.completed")
+	require.Contains(t, rec.Body.String(), `"type":"response.completed"`)
+	require.Contains(t, rec.Body.String(), `"id":"cmp_1"`)
+}
+
 func TestOpenAIBuildUpstreamRequestOAuthMessagesBridgeUsesSessionOnly(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	rec := httptest.NewRecorder()

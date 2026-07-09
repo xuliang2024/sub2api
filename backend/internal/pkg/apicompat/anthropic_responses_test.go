@@ -1695,6 +1695,69 @@ func TestAnthropicEventToResponses_CacheTokensRoundTripFromMessageStart(t *testi
 	assert.Equal(t, 9, completed.Response.Usage.InputTokensDetails.CachedTokens)
 }
 
+func TestAnthropicEventToResponses_TextDoneAndCompletedCarryFinalText(t *testing.T) {
+	state := NewAnthropicEventToResponsesState()
+
+	AnthropicEventToResponsesEvents(&AnthropicStreamEvent{
+		Type: "message_start",
+		Message: &AnthropicResponse{
+			ID:    "msg_stream_text",
+			Model: "claude-opus-4-8",
+		},
+	}, state)
+	AnthropicEventToResponsesEvents(&AnthropicStreamEvent{
+		Type:  "content_block_start",
+		Index: intPtr(0),
+		ContentBlock: &AnthropicContentBlock{
+			Type: "text",
+		},
+	}, state)
+	AnthropicEventToResponsesEvents(&AnthropicStreamEvent{
+		Type: "content_block_delta",
+		Delta: &AnthropicDelta{
+			Type: "text_delta",
+			Text: "hello ",
+		},
+	}, state)
+	AnthropicEventToResponsesEvents(&AnthropicStreamEvent{
+		Type: "content_block_delta",
+		Delta: &AnthropicDelta{
+			Type: "text_delta",
+			Text: "Claude",
+		},
+	}, state)
+
+	doneEvents := AnthropicEventToResponsesEvents(&AnthropicStreamEvent{
+		Type:  "content_block_stop",
+		Index: intPtr(0),
+	}, state)
+	require.Len(t, doneEvents, 1)
+	assert.Equal(t, "response.output_text.done", doneEvents[0].Type)
+	assert.Equal(t, "hello Claude", doneEvents[0].Text)
+
+	stopEvents := AnthropicEventToResponsesEvents(&AnthropicStreamEvent{Type: "message_stop"}, state)
+	var itemDone *ResponsesStreamEvent
+	var completed *ResponsesStreamEvent
+	for i := range stopEvents {
+		switch stopEvents[i].Type {
+		case "response.output_item.done":
+			itemDone = &stopEvents[i]
+		case "response.completed":
+			completed = &stopEvents[i]
+		}
+	}
+	require.NotNil(t, itemDone)
+	require.NotNil(t, itemDone.Item)
+	require.Len(t, itemDone.Item.Content, 1)
+	assert.Equal(t, "hello Claude", itemDone.Item.Content[0].Text)
+
+	require.NotNil(t, completed)
+	require.NotNil(t, completed.Response)
+	require.Len(t, completed.Response.Output, 1)
+	require.Len(t, completed.Response.Output[0].Content, 1)
+	assert.Equal(t, "hello Claude", completed.Response.Output[0].Content[0].Text)
+}
+
 func TestAnthropicEventToResponses_CacheTokensFromMessageDelta(t *testing.T) {
 	state := NewAnthropicEventToResponsesState()
 
@@ -1732,4 +1795,8 @@ func TestAnthropicEventToResponses_CacheTokensFromMessageDelta(t *testing.T) {
 	assert.Equal(t, 8, completed.Response.Usage.OutputTokens)
 	require.NotNil(t, completed.Response.Usage.InputTokensDetails)
 	assert.Equal(t, 11, completed.Response.Usage.InputTokensDetails.CachedTokens)
+}
+
+func intPtr(v int) *int {
+	return &v
 }
