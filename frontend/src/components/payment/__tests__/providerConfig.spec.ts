@@ -15,8 +15,9 @@ function findField(providerKey: string, key: string) {
 
 describe('PROVIDER_CONFIG_FIELDS.wxpay', () => {
   it('keeps admin form validation aligned with backend-required credentials', () => {
-    expect(findField('wxpay', 'publicKeyId')?.optional).toBeFalsy()
     expect(findField('wxpay', 'certSerial')?.optional).toBeFalsy()
+    expect(findField('wxpay', 'publicKey')?.optional).toBe(true)
+    expect(findField('wxpay', 'publicKeyId')?.optional).toBe(true)
   })
 
   it('only keeps the simplified visible credential set in the admin form', () => {

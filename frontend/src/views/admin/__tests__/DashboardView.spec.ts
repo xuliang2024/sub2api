@@ -10,6 +10,10 @@ const { getSnapshotV2, getUserUsageTrend, getUserSpendingRanking } = vi.hoisted(
   getUserSpendingRanking: vi.fn()
 }))
 
+const { refreshBatchImageAccess } = vi.hoisted(() => ({
+  refreshBatchImageAccess: vi.fn()
+}))
+
 vi.mock('@/api/admin', () => ({
   adminAPI: {
     dashboard: {
@@ -23,6 +27,13 @@ vi.mock('@/api/admin', () => ({
 vi.mock('@/stores/app', () => ({
   useAppStore: () => ({
     showError: vi.fn()
+  })
+}))
+
+vi.mock('@/composables/useBatchImageAccess', () => ({
+  useBatchImageAccess: () => ({
+    canUseBatchImage: false,
+    refreshBatchImageAccess
   })
 }))
 
@@ -90,6 +101,7 @@ describe('admin DashboardView', () => {
     getSnapshotV2.mockReset()
     getUserUsageTrend.mockReset()
     getUserSpendingRanking.mockReset()
+    refreshBatchImageAccess.mockReset()
 
     getSnapshotV2.mockResolvedValue({
       stats: createDashboardStats(),
