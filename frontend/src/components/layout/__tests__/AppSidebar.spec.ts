@@ -53,3 +53,15 @@ describe('AppSidebar header styles', () => {
     expect(sidebarBrandBlockMatch?.[0]).not.toContain('overflow: hidden;')
   })
 })
+
+describe('AppSidebar available channels navigation', () => {
+  it('keeps the entry visible in simple mode when the feature is enabled', () => {
+    const navItem = componentSource
+      .split('\n')
+      .find((line) => line.includes("path: '/available-channels'"))
+
+    expect(navItem).toBeDefined()
+    expect(navItem).toContain('featureFlag: flagAvailableChannels')
+    expect(navItem).not.toContain('hideInSimpleMode')
+  })
+})
