@@ -23,6 +23,7 @@ type AvailableChannelHandler struct {
 	channelService *service.ChannelService
 	apiKeyService  *service.APIKeyService
 	settingService *service.SettingService
+	billingService *service.BillingService
 }
 
 // NewAvailableChannelHandler 创建用户侧可用渠道 handler。
@@ -30,11 +31,13 @@ func NewAvailableChannelHandler(
 	channelService *service.ChannelService,
 	apiKeyService *service.APIKeyService,
 	settingService *service.SettingService,
+	billingService *service.BillingService,
 ) *AvailableChannelHandler {
 	return &AvailableChannelHandler{
 		channelService: channelService,
 		apiKeyService:  apiKeyService,
 		settingService: settingService,
+		billingService: billingService,
 	}
 }
 
@@ -80,6 +83,9 @@ type userSupportedModelPricing struct {
 	ImageOutputPrice           *float64                 `json:"image_output_price"`
 	PerRequestPrice            *float64                 `json:"per_request_price"`
 	Intervals                  []userPricingIntervalDTO `json:"intervals"`
+	// MaxTimeMultiplier 分时定价里的最高一档倍率（>1 才有值）。前端展示折扣时用它把
+	// 当前价折算成标准时段价：折扣区间 = [当前价, 当前价 × 倍率] ÷ 官方价。
+	MaxTimeMultiplier *float64 `json:"max_time_multiplier,omitempty"`
 }
 
 // userPricingIntervalDTO 定价区间白名单（去掉内部 ID、SortOrder 等前端不渲染的字段）。
@@ -104,6 +110,19 @@ type userSupportedModel struct {
 	Name     string                     `json:"name"`
 	Platform string                     `json:"platform"`
 	Pricing  *userSupportedModelPricing `json:"pricing"`
+	// OfficialPricing 官方刊例价（USD / token），与计费目录同源，仅供前端计算折扣。
+	// 目录未收录（或只有兜底价）时为 null，前端展示「官方未收录」。
+	OfficialPricing *userOfficialPricing `json:"official_pricing"`
+}
+
+// userOfficialPricing 官方刊例价的用户侧白名单字段（USD / token，图片价按张）。
+type userOfficialPricing struct {
+	InputPrice        *float64 `json:"input_price"`
+	OutputPrice       *float64 `json:"output_price"`
+	CacheWritePrice   *float64 `json:"cache_write_price"`
+	CacheWrite1hPrice *float64 `json:"cache_write_1h_price,omitempty"`
+	CacheReadPrice    *float64 `json:"cache_read_price"`
+	ImageOutputPrice  *float64 `json:"image_output_price,omitempty"`
 }
 
 // userChannelPlatformSection 单渠道内某个平台的子视图：用户可见的分组 + 该平台
@@ -179,7 +198,49 @@ func (h *AvailableChannelHandler) List(c *gin.Context) {
 		})
 	}
 
+	attachOfficialPricing(out, h.billingService)
 	response.Success(c, out)
+}
+
+// attachOfficialPricing 给每个模型补官方参考价，供前端展示「相对官方的折扣」。
+//
+// 同一模型会出现在多个渠道/平台下，这里按模型名做请求内 memo，目录只解析一次。
+// billingService 为 nil（测试或未接计费）时保持 official_pricing = null。
+func attachOfficialPricing(channels []userAvailableChannel, billing *service.BillingService) {
+	if billing == nil {
+		return
+	}
+	memo := make(map[string]*userOfficialPricing, 64)
+	for ci := range channels {
+		sections := channels[ci].Platforms
+		for si := range sections {
+			models := sections[si].SupportedModels
+			for mi := range models {
+				name := models[mi].Name
+				cached, seen := memo[name]
+				if !seen {
+					cached = toUserOfficialPricing(billing.GetOfficialPricing(name))
+					memo[name] = cached
+				}
+				models[mi].OfficialPricing = cached
+			}
+		}
+	}
+}
+
+// toUserOfficialPricing 把 service 层官价转成用户 DTO；nil 入参返回 nil。
+func toUserOfficialPricing(p *service.OfficialModelPricing) *userOfficialPricing {
+	if p == nil {
+		return nil
+	}
+	return &userOfficialPricing{
+		InputPrice:        p.InputPrice,
+		OutputPrice:       p.OutputPrice,
+		CacheWritePrice:   p.CacheWritePrice,
+		CacheWrite1hPrice: p.CacheWrite1hPrice,
+		CacheReadPrice:    p.CacheReadPrice,
+		ImageOutputPrice:  p.ImageOutputPrice,
+	}
 }
 
 // localizeUserAvailableGroups 把分组名称就地换成请求首选语言的版本。
@@ -356,5 +417,23 @@ func toUserPricing(p *service.ChannelModelPricing) *userSupportedModelPricing {
 		ImageOutputPrice:           p.ImageOutputPrice,
 		PerRequestPrice:            p.PerRequestPrice,
 		Intervals:                  intervals,
+		MaxTimeMultiplier:          maxTimeMultiplier(p),
 	}
+}
+
+// maxTimeMultiplier 取分时倍率的最高档；没有分时或最高档 <= 1 时返回 nil。
+func maxTimeMultiplier(p *service.ChannelModelPricing) *float64 {
+	if p == nil || p.TimePricing == nil || len(p.TimePricing.Periods) == 0 {
+		return nil
+	}
+	highest := 1.0
+	for _, period := range p.TimePricing.Periods {
+		if period.Multiplier > highest {
+			highest = period.Multiplier
+		}
+	}
+	if highest <= 1 {
+		return nil
+	}
+	return &highest
 }

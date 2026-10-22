@@ -1390,6 +1390,79 @@ func (s *BillingService) GetModelPricing(model string) (*ModelPricing, error) {
 	return s.getModelPricingAt(model, timezone.Now())
 }
 
+// OfficialModelPricing 模型的官方刊例价（USD / token），仅用于展示「折扣」。
+//
+// 与 GetModelPricing 的差别是刻意收窄的：
+//   - 只做确定性识别（精确名 / 已知拼写变体 / 去掉日期后缀 / 显式改名别名），
+//     不走"名字里带 gpt- 就给个价格"这类系列兜底，避免给不相干型号编出折扣；
+//   - 不套用分时（峰谷）或 Pro→Flash 策略，折扣基准是稳定的刊例价，
+//     不会因为用户白天或凌晨打开页面而变动；也不使用内置 fallback 价卡。
+//
+// 目录未收录时返回 nil（前端展示「官方未收录」）。
+type OfficialModelPricing struct {
+	InputPrice        *float64 // 输入，USD / token
+	OutputPrice       *float64 // 输出，USD / token
+	CacheWritePrice   *float64 // 5m 缓存写入，USD / token
+	CacheWrite1hPrice *float64 // 1h 缓存写入；仅当目录区分 5m/1h 时给出
+	CacheReadPrice    *float64 // 缓存读取，USD / token
+	ImageOutputPrice  *float64 // 图片输出，USD / 张
+}
+
+// officialPricingAliases 只收录「同一模型的改名 / 命名差异」，禁止跨代映射。
+//
+// 反例：把 glm-5.5-flash 指到目录里的 glm-5.3 会让折扣拿另一代模型的价格当基准，
+// 属于错误信息，比"未收录"更糟。新增条目前须先确认两个名字是同一个模型、同一档价。
+var officialPricingAliases = map[string]string{
+	// 站点上的 V4.1-Flash（点号写法、连字符写法、带日期快照）在目录里统一叫 deepseek-flash。
+	"deepseek-v4.1-flash":          "deepseek-flash",
+	"deepseek-v4.1-flash-20260910": "deepseek-flash",
+	"deepseek-v4-1-flash-260910":   "deepseek-flash",
+	// 带日期快照的 V4-Pro 与目录里的 deepseek-v4-pro 同代同价。
+	"deepseek-v4-pro-0813": "deepseek-v4-pro",
+}
+
+// GetOfficialPricing 查询模型的官方刊例价；目录未收录返回 nil。
+func (s *BillingService) GetOfficialPricing(model string) *OfficialModelPricing {
+	if s == nil || s.pricingService == nil {
+		return nil
+	}
+	key := strings.ToLower(strings.TrimSpace(model))
+	if key == "" {
+		return nil
+	}
+	entry := s.lookupOfficialCatalogEntry(key)
+	if entry == nil {
+		return nil
+	}
+	out := &OfficialModelPricing{
+		InputPrice:       nonZeroPtr(entry.InputCostPerToken),
+		OutputPrice:      nonZeroPtr(entry.OutputCostPerToken),
+		CacheWritePrice:  nonZeroPtr(entry.CacheCreationInputTokenCost),
+		CacheReadPrice:   nonZeroPtr(entry.CacheReadInputTokenCost),
+		ImageOutputPrice: nonZeroPtr(entry.OutputCostPerImage),
+	}
+	// 计费只在 1h 价高于 5m 价时才区分档位；其余情况 1h 价对用户无意义。
+	if entry.CacheCreationInputTokenCostAbove1hr > entry.CacheCreationInputTokenCost {
+		out.CacheWrite1hPrice = nonZeroPtr(entry.CacheCreationInputTokenCostAbove1hr)
+	}
+	if out.InputPrice == nil && out.OutputPrice == nil && out.CacheWritePrice == nil &&
+		out.CacheReadPrice == nil && out.ImageOutputPrice == nil {
+		return nil
+	}
+	return out
+}
+
+// lookupOfficialCatalogEntry 按「精确 / 拼写变体 / 去日期后缀 → 显式别名」查找目录条目。
+func (s *BillingService) lookupOfficialCatalogEntry(key string) *LiteLLMModelPricing {
+	if entry := s.pricingService.GetIdentifiedModelPricing(key); entry != nil {
+		return entry
+	}
+	if alias, ok := officialPricingAliases[key]; ok {
+		return s.pricingService.GetIdentifiedModelPricing(alias)
+	}
+	return nil
+}
+
 // CacheStoragePricePerTokenHour 返回模型的显式上下文缓存存储单价（每 token 每小时，USD）。
 // 优先级：价格表（override_file 等）按确定性识别配置的值 > 内置型号价 > 内置 Pro/Flash 系列兜底价；
 // 均未命中返回 0。

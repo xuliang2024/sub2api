@@ -50,12 +50,28 @@ export interface UserSupportedModelPricing {
   image_output_price: number | null
   per_request_price: number | null
   intervals: UserPricingInterval[]
+  /** 分时定价的最高档倍率（>1 才有值）；折扣按「当前价 ~ 当前价 × 倍率」展示区间。 */
+  max_time_multiplier?: number | null
+}
+
+/**
+ * 官方刊例价（USD / token；图片价按张），与计费目录同源，仅用于计算折扣。
+ * 字段为 null 表示目录未收录该项，整块为 null 表示该模型没有官方价可比。
+ */
+export interface UserOfficialPricing {
+  input_price: number | null
+  output_price: number | null
+  cache_write_price: number | null
+  cache_write_1h_price?: number | null
+  cache_read_price: number | null
+  image_output_price?: number | null
 }
 
 export interface UserSupportedModel {
   name: string
   platform: string
   pricing: UserSupportedModelPricing | null
+  official_pricing: UserOfficialPricing | null
 }
 
 /**
