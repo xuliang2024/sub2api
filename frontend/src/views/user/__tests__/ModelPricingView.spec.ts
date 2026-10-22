@@ -206,6 +206,43 @@ describe('model-centric price table', () => {
     expect(subRows[1].text()).toContain('国产模型线路')
   })
 
+  it('rounds prices to two decimals but keeps sub-cent cache prices visible', async () => {
+    channelsAPI.getAvailable.mockResolvedValue([
+      {
+        name: '国产模型线路',
+        description: '',
+        platforms: [
+          {
+            platform: 'openai',
+            groups: [group(31, '国产全模型', 1)],
+            supported_models: [
+              {
+                name: 'glm-5.3-flash',
+                platform: 'openai',
+                // 0.0598970 / 0.2064900 / 缓存读 0.0015（USD / 1M）
+                pricing: pricing(5.9897e-8, 2.0649e-7, 1.5e-9, 5.9897e-8),
+                official_pricing: {
+                  input_price: 1.17994e-7,
+                  output_price: 4.1298e-7,
+                  cache_read_price: 6e-9,
+                  cache_write_price: 1.17994e-7,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ])
+    const wrapper = await mountView()
+
+    const row = wrapper.findAll('tbody tr').find((tr) => tr.classes().includes('cursor-pointer'))!
+    const cells = row.findAll('td')
+    expect(cells[1].text()).toBe('0.12') // 官方输入 0.117994 → 0.12
+    expect(cells[4].text()).toBe('0.06') // 本站输入 0.059897 → 0.06
+    expect(cells[3].text()).toContain('0.006') // 官方缓存读 6e-9 不被抹成 0.00
+    expect(cells[6].text()).toContain('0.0015') // 本站缓存读 1.5e-9 保留
+  })
+
   it('shows a discount range for models with time-based pricing', async () => {
     channelsAPI.getAvailable.mockResolvedValue([
       {
