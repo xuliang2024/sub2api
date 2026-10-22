@@ -611,6 +611,7 @@ export default {
     title: 'Available Channels',
     description: 'Channels you can access, along with their supported models and pricing',
     searchPlaceholder: 'Search channels or models...',
+    viewPricing: 'Model pricing',
     empty: 'No available channels',
     noModels: 'No models configured',
     noPricing: 'Pricing not configured',
@@ -645,6 +646,59 @@ export default {
       intervals: 'Tiered Pricing',
       unitPerMillion: '/ 1M tokens',
       unitPerRequest: '/ request'
+    }
+  },
+
+  // Model Pricing (user-facing flat price table)
+  modelPricing: {
+    title: 'Model Pricing',
+    description: 'Compare per-model list prices and what you actually pay, with search, group filter and price sorting',
+    searchPlaceholder: 'Search models, channels or groups...',
+    allGroups: 'All groups',
+    onlyPriced: 'Priced only',
+    empty: 'No models',
+    tiered: 'Tiered',
+    tieredHint: 'Only tiered pricing is configured; the table shows the first tier. See the hover card on Available Channels for all tiers',
+    hiddenUnpriced: '{count} more models have no pricing configured and are hidden by "Priced only"',
+    rateVariesHint: 'This model is available in groups with different rates; the paid price uses the lowest rate',
+    sort: {
+      inputAsc: 'Input price low → high',
+      inputDesc: 'Input price high → low',
+      outputAsc: 'Output price low → high',
+      outputDesc: 'Output price high → low',
+      cacheAsc: 'Cache read low → high',
+      name: 'Model name A → Z'
+    },
+    columns: {
+      model: 'Model',
+      platform: 'Platform',
+      channel: 'Channel',
+      billingMode: 'Billing',
+      tokenGroup: 'Per token',
+      input: 'Input',
+      output: 'Output',
+      cacheRead: 'Cache read',
+      cacheWrite: 'Cache write',
+      perRequest: 'Per request',
+      groups: 'Available groups',
+      paid: 'You pay (in/out)'
+    },
+    units: {
+      perMillion: 'USD / 1M tokens',
+      perRequest: 'USD',
+      perRequestShort: '/ req'
+    },
+    billing: {
+      token: 'Per token',
+      perRequest: 'Per request',
+      image: 'Per image',
+      video: 'Per video'
+    },
+    notes: {
+      base: 'Prices are channel list prices',
+      paid: 'You pay = list price × group rate',
+      peak: 'Peak hours apply an extra multiplier',
+      unit: 'Unit: USD'
     }
   },
 

@@ -616,6 +616,7 @@ export default {
     title: '可用渠道',
     description: '查看您可访问的渠道与其支持的模型、定价',
     searchPlaceholder: '搜索渠道或模型...',
+    viewPricing: '模型价格表',
     empty: '暂无可用渠道',
     noModels: '未配置模型',
     noPricing: '未配置定价',
@@ -650,6 +651,59 @@ export default {
       intervals: '阶梯定价',
       unitPerMillion: '/ 1M token',
       unitPerRequest: '/ 次'
+    }
+  },
+
+  // Model Pricing (user-facing flat price table)
+  modelPricing: {
+    title: '模型价格',
+    description: '按模型查看单价与实付价，支持搜索、分组筛选与价格排序',
+    searchPlaceholder: '搜索模型、渠道或分组...',
+    allGroups: '全部分组',
+    onlyPriced: '仅看有定价',
+    empty: '暂无模型',
+    tiered: '阶梯',
+    tieredHint: '该模型只配置了阶梯价，表格显示首档价格；完整阶梯见「可用渠道」的悬停气泡',
+    hiddenUnpriced: '另有 {count} 个模型未配置定价，已被「仅看有定价」隐藏',
+    rateVariesHint: '该模型所在分组倍率不同，实付按其中最低倍率计算',
+    sort: {
+      inputAsc: '输入价 低 → 高',
+      inputDesc: '输入价 高 → 低',
+      outputAsc: '输出价 低 → 高',
+      outputDesc: '输出价 高 → 低',
+      cacheAsc: '缓存读价 低 → 高',
+      name: '模型名 A → Z'
+    },
+    columns: {
+      model: '模型',
+      platform: '平台',
+      channel: '渠道',
+      billingMode: '计费模式',
+      tokenGroup: '按 Token 计费',
+      input: '输入',
+      output: '输出',
+      cacheRead: '缓存读',
+      cacheWrite: '缓存写',
+      perRequest: '按次',
+      groups: '可用分组',
+      paid: '实付（入/出）'
+    },
+    units: {
+      perMillion: 'USD / 1M tokens',
+      perRequest: 'USD',
+      perRequestShort: '/ 次'
+    },
+    billing: {
+      token: '按 Token',
+      perRequest: '按次',
+      image: '按图片',
+      video: '按视频'
+    },
+    notes: {
+      base: '价格为渠道基础价',
+      paid: '实付 = 基础价 × 分组倍率',
+      peak: '高峰时段另乘高峰倍率',
+      unit: '单位：USD'
     }
   },
 
