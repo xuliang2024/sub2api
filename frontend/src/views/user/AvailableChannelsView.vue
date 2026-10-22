@@ -20,6 +20,14 @@
           </div>
 
           <div class="flex w-full flex-shrink-0 flex-wrap items-center justify-end gap-3 lg:w-auto">
+            <router-link
+              to="/model-pricing"
+              class="btn btn-secondary inline-flex items-center gap-1.5"
+              :title="t('availableChannels.viewPricing')"
+            >
+              <Icon name="dollar" size="md" />
+              <span class="hidden sm:inline">{{ t('availableChannels.viewPricing') }}</span>
+            </router-link>
             <button
               @click="loadChannels"
               :disabled="loading"
