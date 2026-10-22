@@ -455,7 +455,6 @@ import userChannelsAPI, {
 import userGroupsAPI from '@/api/groups'
 import { useAppStore } from '@/stores/app'
 import { extractApiErrorMessage } from '@/utils/apiError'
-import { formatScaled } from '@/utils/pricing'
 import { platformBadgeClass } from '@/utils/platformColors'
 import {
   BILLING_MODE_TOKEN,
@@ -870,10 +869,21 @@ function sortedOffers(row: ModelRow): Offer[] {
 
 /* ---------------- 展示格式化 ---------------- */
 
-/** 表格内不带 "$"（表头已标注 USD）；null 显示 "-"。 */
+/**
+ * 表格内不带 "$"（表头已标注 USD），统一保留两位小数：0.117994 / 1.474926 这类长尾
+ * 对读价没有意义，反而让整列难以扫读。
+ *
+ * 例外：换算后不足 1 分（典型是缓存读价，如 $0.0015 / 1M）会保留 4 位小数并去掉末尾
+ * 的 0，否则会被四舍五入成 0.00，等于把价格抹掉。
+ */
 function money(value: number | null, scale = PER_MILLION): string {
-  const formatted = formatScaled(value, scale, 2)
-  return formatted === '-' ? '-' : formatted.replace(/^\$/, '')
+  if (value == null) return '-'
+  const scaled = value * scale
+  if (scaled === 0) return '0.00'
+  if (Math.abs(scaled) < 0.01) {
+    return scaled.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')
+  }
+  return scaled.toFixed(2)
 }
 
 function officialInput(row: ModelRow): string {
