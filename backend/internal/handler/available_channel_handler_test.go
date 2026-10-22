@@ -271,3 +271,48 @@ func TestBuildPlatformSections_CompositeWithoutModelsKeepsEmptyCompositeSection(
 	require.Len(t, sections[0].Groups, 1)
 	require.Empty(t, sections[0].SupportedModels)
 }
+
+func TestAttachOfficialPricing_SkipsWhenBillingUnavailable(t *testing.T) {
+	// 未接计费（或测试场景）时不应 panic，official_pricing 保持 null。
+	channels := []userAvailableChannel{{
+		Name: "ch",
+		Platforms: []userChannelPlatformSection{{
+			Platform:        "openai",
+			SupportedModels: []userSupportedModel{{Name: "deepseek-flash"}},
+		}},
+	}}
+	attachOfficialPricing(channels, nil)
+	require.Nil(t, channels[0].Platforms[0].SupportedModels[0].OfficialPricing)
+}
+
+func TestToUserOfficialPricing_MapsAllFields(t *testing.T) {
+	in, out, cw, cw1h, cr, img := 3e-6, 1.5e-5, 3.75e-6, 6e-6, 3e-7, 0.04
+	dto := toUserOfficialPricing(&service.OfficialModelPricing{
+		InputPrice:        &in,
+		OutputPrice:       &out,
+		CacheWritePrice:   &cw,
+		CacheWrite1hPrice: &cw1h,
+		CacheReadPrice:    &cr,
+		ImageOutputPrice:  &img,
+	})
+	require.NotNil(t, dto)
+	require.InDelta(t, in, *dto.InputPrice, 1e-15)
+	require.InDelta(t, out, *dto.OutputPrice, 1e-15)
+	require.InDelta(t, cw, *dto.CacheWritePrice, 1e-15)
+	require.InDelta(t, cw1h, *dto.CacheWrite1hPrice, 1e-15)
+	require.InDelta(t, cr, *dto.CacheReadPrice, 1e-15)
+	require.InDelta(t, img, *dto.ImageOutputPrice, 1e-12)
+	require.Nil(t, toUserOfficialPricing(nil))
+}
+
+func TestUserSupportedModel_OfficialPricingShape(t *testing.T) {
+	// official_pricing 必须始终出现在 JSON 里（未收录时为 null），前端据此区分
+	// "没有官价" 与 "字段缺失"。
+	raw, err := json.Marshal(userSupportedModel{Name: "m", Platform: "openai"})
+	require.NoError(t, err)
+	var decoded map[string]any
+	require.NoError(t, json.Unmarshal(raw, &decoded))
+	value, exists := decoded["official_pricing"]
+	require.True(t, exists, "official_pricing 字段必须存在")
+	require.Nil(t, value)
+}
