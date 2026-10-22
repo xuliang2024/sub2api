@@ -654,56 +654,79 @@ export default {
     }
   },
 
-  // Model Pricing (user-facing flat price table)
+  // Model Pricing（按模型聚合 + 官方价折扣）
   modelPricing: {
     title: '模型价格',
-    description: '按模型查看单价与实付价，支持搜索、分组筛选与价格排序',
+    description: '按模型查看官方价与实际单价，同一模型展开可见各分组报价与折扣',
     searchPlaceholder: '搜索模型、渠道或分组...',
     allGroups: '全部分组',
-    onlyPriced: '仅看有定价',
+    allPlatforms: '全部平台',
+    onlyDiscounted: '仅看有折扣',
     empty: '暂无模型',
     tiered: '阶梯',
     tieredHint: '该模型只配置了阶梯价，表格显示首档价格；完整阶梯见「可用渠道」的悬停气泡',
-    hiddenUnpriced: '另有 {count} 个模型未配置定价，已被「仅看有定价」隐藏',
-    rateVariesHint: '该模型所在分组倍率不同，实付按其中最低倍率计算',
-    sort: {
-      inputAsc: '输入价 低 → 高',
-      inputDesc: '输入价 高 → 低',
-      outputAsc: '输出价 低 → 高',
-      outputDesc: '输出价 高 → 低',
-      cacheAsc: '缓存读价 低 → 高',
-      name: '模型名 A → Z'
+    hiddenUndiscounted: '另有 {count} 个模型没有折扣（未收录官方价或与官价持平），已被「仅看有折扣」隐藏',
+    cacheAboveOfficial: '缓存价高于官方价',
+    stats: {
+      summary: '共 {models} 个模型 · {offers} 条线路',
+      avgDiscount: '平均折扣',
+      aboveOfficial: '{count} 条线路高于官价'
+    },
+    blocks: {
+      official: '官方定价',
+      ours: '本站价格',
+      unit: 'USD / 1M',
+      unitPaid: 'USD / 1M · 实收'
     },
     columns: {
       model: '模型',
-      platform: '平台',
-      channel: '渠道',
-      billingMode: '计费模式',
-      tokenGroup: '按 Token 计费',
+      group: '分组',
+      channel: '线路',
+      rate: '倍率',
       input: '输入',
       output: '输出',
+      cache: '缓存 读/写',
       cacheRead: '缓存读',
       cacheWrite: '缓存写',
-      perRequest: '按次',
-      groups: '可用分组',
-      paid: '实付（入/出）'
+      discount: '折扣',
+      groups: '可用分组'
+    },
+    cacheLabels: {
+      read: '读',
+      write: '写'
+    },
+    discount: {
+      value: '{value} 折',
+      range: '{min}–{max} 折',
+      timePricing: '分时价 · 峰时 ×{multiplier}',
+      inputHint: '折扣 = 本站实付 ÷ 官方价，按输入价计算',
+      save: '省 {percent}%',
+      above: '高于官价 {percent}%',
+      aboveLabel: '高于官方价',
+      outputDiscount: '输出 {value} 折',
+      notListed: '官方未收录',
+      notListedHint: '计费目录未收录该模型的官方价，无法计算折扣'
+    },
+    expand: {
+      officialRef: '官方参考价',
+      summary: '{groups} 个分组 · {offers} 条线路',
+      vsOfficial: 'vs 官方'
     },
     units: {
-      perMillion: 'USD / 1M tokens',
-      perRequest: 'USD',
-      perRequestShort: '/ 次'
+      perRequestShort: '次',
+      perImage: '张'
     },
-    billing: {
-      token: '按 Token',
-      perRequest: '按次',
-      image: '按图片',
-      video: '按视频'
+    sort: {
+      discountAsc: '折扣 低 → 高',
+      inputAsc: '输入价 低 → 高',
+      outputAsc: '输出价 低 → 高',
+      name: '模型名 A → Z'
     },
     notes: {
-      base: '价格为渠道基础价',
-      paid: '实付 = 基础价 × 分组倍率',
-      peak: '高峰时段另乘高峰倍率',
-      unit: '单位：USD'
+      paid: '实付 = 渠道价 × 分组倍率',
+      official: '官方价取自计费目录（与扣费同源），未收录的模型不显示折扣',
+      discount: '折扣按输入价计算，输入/输出不一致时另标输出折扣',
+      peak: '高峰时段另乘高峰倍率'
     }
   },
 

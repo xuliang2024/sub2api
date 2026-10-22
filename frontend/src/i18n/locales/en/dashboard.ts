@@ -649,56 +649,79 @@ export default {
     }
   },
 
-  // Model Pricing (user-facing flat price table)
+  // Model Pricing (model-centric table with official list price + discount)
   modelPricing: {
     title: 'Model Pricing',
-    description: 'Compare per-model list prices and what you actually pay, with search, group filter and price sorting',
+    description: 'Official list price next to what you actually pay, expandable by group',
     searchPlaceholder: 'Search models, channels or groups...',
     allGroups: 'All groups',
-    onlyPriced: 'Priced only',
+    allPlatforms: 'All platforms',
+    onlyDiscounted: 'Discounted only',
     empty: 'No models',
     tiered: 'Tiered',
-    tieredHint: 'Only tiered pricing is configured; the table shows the first tier. See the hover card on Available Channels for all tiers',
-    hiddenUnpriced: '{count} more models have no pricing configured and are hidden by "Priced only"',
-    rateVariesHint: 'This model is available in groups with different rates; the paid price uses the lowest rate',
-    sort: {
-      inputAsc: 'Input price low → high',
-      inputDesc: 'Input price high → low',
-      outputAsc: 'Output price low → high',
-      outputDesc: 'Output price high → low',
-      cacheAsc: 'Cache read low → high',
-      name: 'Model name A → Z'
+    tieredHint: 'Only tiered pricing is configured; the table shows the first tier. See Available Channels for all tiers',
+    hiddenUndiscounted: '{count} more models have no discount (no official price, or priced at list) and are hidden by "Discounted only"',
+    cacheAboveOfficial: 'Cache price above the official price',
+    stats: {
+      summary: '{models} models · {offers} routes',
+      avgDiscount: 'Average discount',
+      aboveOfficial: '{count} routes above list price'
+    },
+    blocks: {
+      official: 'Official list',
+      ours: 'Your price',
+      unit: 'USD / 1M',
+      unitPaid: 'USD / 1M · billed'
     },
     columns: {
       model: 'Model',
-      platform: 'Platform',
-      channel: 'Channel',
-      billingMode: 'Billing',
-      tokenGroup: 'Per token',
+      group: 'Group',
+      channel: 'Route',
+      rate: 'Rate',
       input: 'Input',
       output: 'Output',
+      cache: 'Cache r/w',
       cacheRead: 'Cache read',
       cacheWrite: 'Cache write',
-      perRequest: 'Per request',
-      groups: 'Available groups',
-      paid: 'You pay (in/out)'
+      discount: 'Discount',
+      groups: 'Groups'
+    },
+    cacheLabels: {
+      read: 'R',
+      write: 'W'
+    },
+    discount: {
+      value: '{value}x',
+      range: '{min}–{max}x',
+      timePricing: 'Time-based · ×{multiplier} at peak',
+      inputHint: 'Discount = billed price ÷ official list price, based on input',
+      save: '{percent}% off',
+      above: '{percent}% above list',
+      aboveLabel: 'Above list price',
+      outputDiscount: 'Output {value}x',
+      notListed: 'Not listed',
+      notListedHint: 'The pricing catalog has no official price for this model, so no discount can be computed'
+    },
+    expand: {
+      officialRef: 'Official list',
+      summary: '{groups} groups · {offers} routes',
+      vsOfficial: 'vs official'
     },
     units: {
-      perMillion: 'USD / 1M tokens',
-      perRequest: 'USD',
-      perRequestShort: '/ req'
+      perRequestShort: 'req',
+      perImage: 'image'
     },
-    billing: {
-      token: 'Per token',
-      perRequest: 'Per request',
-      image: 'Per image',
-      video: 'Per video'
+    sort: {
+      discountAsc: 'Discount low → high',
+      inputAsc: 'Input price low → high',
+      outputAsc: 'Output price low → high',
+      name: 'Model name A → Z'
     },
     notes: {
-      base: 'Prices are channel list prices',
-      paid: 'You pay = list price × group rate',
-      peak: 'Peak hours apply an extra multiplier',
-      unit: 'Unit: USD'
+      paid: 'Billed price = channel price × group rate',
+      official: 'Official prices come from the billing catalog; models not listed there show no discount',
+      discount: 'Discount is based on input price; output discount is shown separately when it differs',
+      peak: 'Peak hours apply an extra multiplier'
     }
   },
 
