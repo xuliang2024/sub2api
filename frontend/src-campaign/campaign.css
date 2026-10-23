@@ -794,6 +794,20 @@ body {
   background: rgba(255, 255, 255, 0.16);
 }
 
+/* 编码 Agent 配置：与 SDK 示例同构，用一条细线把「调用 SDK」和「跑 Agent」分开 */
+.c-agents {
+  margin-top: 44px;
+  padding-top: 28px;
+  border-top: 1px solid var(--c-border);
+}
+
+.c-agent-note {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--c-text-soft);
+}
+
 /* Markdown 正文 */
 .markdown-body {
   font-size: 15px;

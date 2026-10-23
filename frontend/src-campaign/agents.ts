@@ -21,8 +21,9 @@ export const AGENT_SAMPLES: AgentSample[] = [
     label: 'Codex CLI',
     lang: 'bash',
     noteKey: 'agents.note.codex',
-    code: `# ~/.codex/config.toml
+    code: `# ~/.codex/config.toml — merge these keys if the file already exists
 mkdir -p ~/.codex
+cp -n ~/.codex/config.toml ~/.codex/config.toml.bak 2>/dev/null || true
 cat > ~/.codex/config.toml <<'EOF'
 model = "{{MODEL}}"
 model_provider = "apiz"
