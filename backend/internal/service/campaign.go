@@ -134,29 +134,29 @@ var campaignSupportedLocales = map[string]struct{}{
 }
 
 type Campaign struct {
-	ID      int64
-	Slug    string
-	Name    string
-	Status  CampaignStatus
-	Host    string
-	GroupID *int64
+	ID      int64          `json:"id"`
+	Slug    string         `json:"slug"`
+	Name    string         `json:"name"`
+	Status  CampaignStatus `json:"status"`
+	Host    string         `json:"host"`
+	GroupID *int64         `json:"group_id"`
 	// Locale 界面语言：en（默认，海外投放）/ zh / ja / ko / th。
-	Locale       string
-	Brand        CampaignBrand
-	Hero         CampaignHero
-	ContentMD    string
-	ModelEntries []CampaignModelEntry
-	CodeSamples  []CampaignCodeSample
-	CTA          CampaignCTA
-	Trial        CampaignTrial
-	SEO          CampaignSEO
+	Locale       string               `json:"locale"`
+	Brand        CampaignBrand        `json:"brand"`
+	Hero         CampaignHero         `json:"hero"`
+	ContentMD    string               `json:"content_md"`
+	ModelEntries []CampaignModelEntry `json:"model_entries"`
+	CodeSamples  []CampaignCodeSample `json:"code_samples"`
+	CTA          CampaignCTA          `json:"cta"`
+	Trial        CampaignTrial        `json:"trial"`
+	SEO          CampaignSEO          `json:"seo"`
 	// HiddenModels 不在落地页展示的模型名（别名/退役模型）。
-	HiddenModels []string
+	HiddenModels []string `json:"hidden_models"`
 	// Translations 按语言的正文覆盖，key 为语言代码。
-	Translations map[string]CampaignLocaleContent
-	CreatedBy    *int64
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	Translations map[string]CampaignLocaleContent `json:"translations"`
+	CreatedBy    *int64                           `json:"created_by"`
+	CreatedAt    time.Time                        `json:"created_at"`
+	UpdatedAt    time.Time                        `json:"updated_at"`
 }
 
 // CampaignGroupView 落地页展示的分组摘要。
