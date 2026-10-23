@@ -419,6 +419,7 @@ function handleLogout(): void {
         <ModelGrid
           :models="campaign.models"
           :group="campaign.group"
+          :group-label="campaign.brand.group_label"
           :catalog-count="campaign.catalog?.length ?? 0"
           @open-catalog="setTab('catalog')"
         />
