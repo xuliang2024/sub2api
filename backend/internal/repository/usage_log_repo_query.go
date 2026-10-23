@@ -51,6 +51,39 @@ func (r *usageLogRepository) GetByID(ctx context.Context, id int64) (log *servic
 	return log, nil
 }
 
+// GetByRequestIDAndAPIKey 按 (request_id, api_key_id) 精确取一条账单。
+// 走唯一索引 idx_usage_logs_request_id_api_key_unique，单行查询。
+// api_key_id 是安全边界：只按 request_id 查会跨 Key 命中别人的记录。
+func (r *usageLogRepository) GetByRequestIDAndAPIKey(ctx context.Context, requestID string, apiKeyID int64) (log *service.UsageLog, err error) {
+	query := "SELECT " + usageLogSelectColumns + " FROM usage_logs WHERE request_id = $1 AND api_key_id = $2"
+	rows, err := r.sql.QueryContext(ctx, query, requestID, apiKeyID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		// 保持主错误优先；仅在无错误时回传 Close 失败。
+		// 同时清空返回值，避免误用不完整结果。
+		if closeErr := rows.Close(); closeErr != nil && err == nil {
+			err = closeErr
+			log = nil
+		}
+	}()
+	if !rows.Next() {
+		if err = rows.Err(); err != nil {
+			return nil, err
+		}
+		return nil, service.ErrUsageLogNotFound
+	}
+	log, err = scanUsageLog(rows)
+	if err != nil {
+		return nil, err
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return log, nil
+}
+
 func (r *usageLogRepository) ListByUser(ctx context.Context, userID int64, params pagination.PaginationParams) ([]service.UsageLog, *pagination.PaginationResult, error) {
 	return r.listUsageLogsWithPagination(ctx, "WHERE user_id = $1", []any{userID}, params)
 }

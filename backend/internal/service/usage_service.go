@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -153,6 +154,24 @@ func (s *UsageService) GetByID(ctx context.Context, id int64) (*UsageLog, error)
 	log, err := s.usageRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("get usage log: %w", err)
+	}
+	return log, nil
+}
+
+// GetByRequestIDAndAPIKey 按 (request_id, api_key_id) 查询单次请求的账单。
+// 未命中（或该记录不属于这把 Key）统一返回 ErrUsageLogNotFound，调用方不得据此区分
+// "不存在" 与 "无权限"，避免泄露 request_id 的存在性。
+func (s *UsageService) GetByRequestIDAndAPIKey(ctx context.Context, requestID string, apiKeyID int64) (*UsageLog, error) {
+	requestID = strings.TrimSpace(requestID)
+	if requestID == "" || apiKeyID <= 0 {
+		return nil, ErrUsageLogNotFound
+	}
+	log, err := s.usageRepo.GetByRequestIDAndAPIKey(ctx, requestID, apiKeyID)
+	if err != nil {
+		if errors.Is(err, ErrUsageLogNotFound) {
+			return nil, ErrUsageLogNotFound
+		}
+		return nil, fmt.Errorf("get usage log by request id: %w", err)
 	}
 	return log, nil
 }
