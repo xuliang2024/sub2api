@@ -974,6 +974,7 @@ var ProviderSet = wire.NewSet(
 	wire.Bind(new(ChannelCacheInvalidator), new(*ChannelService)),
 	NewModelPricingResolver,
 	NewModelPlazaService,
+	NewCampaignService,
 	NewContentModerationService,
 	NewAffiliateService,
 	ProvidePaymentConfigService,

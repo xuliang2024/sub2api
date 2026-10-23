@@ -57,6 +57,7 @@ type RegisterRequest struct {
 	PromoCode             string `json:"promo_code"`      // 注册优惠码
 	InvitationCode        string `json:"invitation_code"` // 邀请码
 	AffCode               string `json:"aff_code"`        // 邀请返利码
+	Campaign              string `json:"campaign"`        // 广告落地页 slug（归因用）
 }
 
 // SendVerifyCodeRequest 发送验证码请求
@@ -190,14 +191,23 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	_, user, err := h.authService.RegisterWithVerification(
+	// 广告落地页归因：优先取请求体 campaign，其次取 ?c= 查询参数（落地页 CTA 直链）。
+	campaignSlug := req.Campaign
+	if campaignSlug == "" {
+		campaignSlug = c.Query("c")
+	}
+
+	_, user, err := h.authService.RegisterWithOptions(
 		c.Request.Context(),
-		req.Email,
-		req.Password,
-		req.VerifyCode,
-		req.PromoCode,
-		req.InvitationCode,
-		req.AffCode,
+		service.RegisterOptions{
+			Email:          req.Email,
+			Password:       req.Password,
+			VerifyCode:     req.VerifyCode,
+			PromoCode:      req.PromoCode,
+			InvitationCode: req.InvitationCode,
+			AffiliateCode:  req.AffCode,
+			CampaignSlug:   campaignSlug,
+		},
 	)
 	if err != nil {
 		response.ErrorFrom(c, err)

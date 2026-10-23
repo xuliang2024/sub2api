@@ -40,11 +40,19 @@ func ProvideRouter(
 	subscriptionService *service.SubscriptionService,
 	opsService *service.OpsService,
 	settingService *service.SettingService,
+	authService *service.AuthService,
+	campaignService *service.CampaignService,
 	compositeResolver *service.CompositeRouteResolver,
 	redisClient *redis.Client,
 ) *gin.Engine {
 	if cfg.Server.Mode == "release" {
 		gin.SetMode(gin.ReleaseMode)
+	}
+
+	// 注册后的落地页归因钩子。放在这里而不是 DI 构造函数里，是因为 AuthService 早于
+	// CampaignService 构造（后者依赖 ModelPlazaService），而钩子只需要在对外服务前就位。
+	if authService != nil {
+		authService.SetCampaignSignupHooks(campaignService)
 	}
 
 	r := gin.New()
@@ -87,7 +95,7 @@ func ProvideRouter(
 		service.SetWebSearchManager(websearch.NewManager(configs, redisClient))
 	})
 
-	return SetupRouter(r, handlers, jwtAuth, optionalJWTAuth, adminAuth, apiKeyAuth, auditLog, stepUpAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg, redisClient)
+	return SetupRouter(r, handlers, jwtAuth, optionalJWTAuth, adminAuth, apiKeyAuth, auditLog, stepUpAuth, apiKeyService, subscriptionService, opsService, settingService, campaignService, compositeResolver, cfg, redisClient)
 }
 
 func configureTrustedProxies(r *gin.Engine, cfg config.ServerConfig) {

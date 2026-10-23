@@ -481,6 +481,21 @@ const PluginIcon = {
   render: () => h(Icon, { name: 'cube' })
 }
 
+const CampaignIcon = {
+  render: () =>
+    h(
+      'svg',
+      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' },
+      [
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          d: 'M10.34 15.94A3 3 0 1113.5 12l6.5-6.5V19l-9.66-3.06zM3 11v2a1 1 0 001 1h2.5l3.84 3.06M15 8.5h.01'
+        })
+      ]
+    )
+}
+
 const BellIcon = {
   render: () =>
     h(
@@ -796,6 +811,7 @@ const adminNavItems = computed((): NavItem[] => {
     { path: '/admin/accounts', label: t('nav.accounts'), icon: GlobeIcon },
     { path: '/admin/plugins', label: t('nav.plugins'), icon: PluginIcon, featureFlag: flagPluginManagement },
     { path: '/admin/announcements', label: t('nav.announcements'), icon: BellIcon },
+    { path: '/admin/campaigns', label: t('nav.campaigns'), icon: CampaignIcon },
     { path: '/admin/proxies', label: t('nav.proxies'), icon: ServerIcon },
     {
       path: '/admin/security-audit',
