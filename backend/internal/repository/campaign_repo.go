@@ -84,8 +84,8 @@ func (r *campaignRepository) Create(ctx context.Context, campaign *service.Campa
 	}
 	rows, err := r.sql.QueryContext(ctx,
 		`INSERT INTO campaigns
-			(slug, name, status, host, group_id, locale, brand, hero, content_md, model_entries, code_samples, cta, trial, seo, translations, created_by)
-		 VALUES ($1,$2,$3,NULLIF($4,''),$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+			(slug, name, status, host, group_id, locale, brand, hero, content_md, model_entries, code_samples, cta, trial, seo, translations, hidden_models, created_by)
+		 VALUES ($1,$2,$3,NULLIF($4,''),$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
 		 RETURNING`+campaignSelectColumns,
 		campaign.Slug, campaign.Name, string(campaign.Status), campaign.Host, campaign.GroupID, campaign.Locale,
 		brand, hero, campaign.ContentMD, entries, samples, cta, trial, seo, translations, hidden, campaign.CreatedBy)
