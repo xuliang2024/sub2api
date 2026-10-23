@@ -98,6 +98,8 @@ const en: Dict = {
   'models.officialPrice': 'List price',
   'models.ourPrice': 'You pay',
   'models.save': 'Save {percent}%',
+  'models.offpeak': 'Off-peak',
+  'models.peakShort': 'Peak',
   'models.empty': 'Model list is being configured. Check back shortly.',
 
   'catalog.title': 'All models in this plan',
@@ -237,10 +239,12 @@ const zh: Dict = {
   'models.cacheRead': '缓存命中',
   'models.perRequest': '按次调用',
   'models.perCallUnit': '{price} / 次',
-  'models.peak': '峰时 {periods}',
+  'models.peak': '忙时 {periods}',
   'models.officialPrice': '官方价',
   'models.ourPrice': '你的价格',
   'models.save': '省 {percent}%',
+  'models.offpeak': '谷时',
+  'models.peakShort': '忙时',
   'models.empty': '模型清单正在配置中，请稍后再来。',
 
   'catalog.title': '本分组全部模型',
@@ -381,6 +385,8 @@ const ja: Dict = {
   'models.officialPrice': '定価',
   'models.ourPrice': 'ご利用価格',
   'models.save': '{percent}% お得',
+  'models.offpeak': 'オフピーク',
+  'models.peakShort': 'ピーク',
   'models.empty': 'モデル一覧を準備中です。しばらくしてからご確認ください。',
 
   'catalog.title': 'このプランの全モデル',
@@ -525,6 +531,8 @@ const ko: Dict = {
   'models.officialPrice': '정가',
   'models.ourPrice': '이용 요금',
   'models.save': '{percent}% 절약',
+  'models.offpeak': '비수기',
+  'models.peakShort': '성수기',
   'models.empty': '모델 목록을 준비 중입니다. 잠시 후 다시 확인해 주세요.',
 
   'catalog.title': '이 플랜의 전체 모델',
@@ -668,6 +676,8 @@ const th: Dict = {
   'models.officialPrice': 'ราคาปกติ',
   'models.ourPrice': 'ราคาที่คุณจ่าย',
   'models.save': 'ประหยัด {percent}%',
+  'models.offpeak': 'นอกช่วงพีค',
+  'models.peakShort': 'ช่วงพีค',
   'models.empty': 'กำลังเตรียมรายการโมเดล กรุณากลับมาดูใหม่ภายหลัง',
 
   'catalog.title': 'โมเดลทั้งหมดในแพ็กเกจนี้',

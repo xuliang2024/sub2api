@@ -20,8 +20,8 @@ const allModels = [
     input_price: 0.00000033,
     output_price: 0.00000099,
     cache_read_price: 0.000000011,
-    official_input_price: 0.00000066,
-    official_output_price: 0.00000198,
+    official_input_price: 0.00000132,
+    official_output_price: 0.00000396,
     time_pricing: [
       { start_time: '09:00', end_time: '12:00', multiplier: 2 },
       { start_time: '14:00', end_time: '18:00', multiplier: 2 },
@@ -37,8 +37,8 @@ const allModels = [
     input_price: 0.000000075,
     output_price: 0.0000003,
     cache_read_price: 0.0000000015,
-    official_input_price: 0.00000015,
-    official_output_price: 0.0000006,
+    official_input_price: 0.0000003,
+    official_output_price: 0.0000012,
     time_pricing: [
       { start_time: '09:00', end_time: '12:00', multiplier: 2 },
       { start_time: '14:00', end_time: '18:00', multiplier: 2 },

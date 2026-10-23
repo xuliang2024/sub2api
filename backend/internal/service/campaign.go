@@ -511,7 +511,7 @@ func (s *CampaignService) Resolve(ctx context.Context, opts CampaignResolveOptio
 		view.GroupID = *campaign.GroupID
 		hidden := hiddenModelSet(campaign.HiddenModels)
 		view.Models = filterHiddenModels(mergeCampaignModels(campaign.ModelEntries, models), hidden)
-		view.Catalog = filterHiddenModels(catalogModels(models), hidden)
+		view.Catalog = filterHiddenModels(catalogModels(models, campaign.ModelEntries), hidden)
 	} else {
 		// 未绑定分组：仅展示配置里的模型名，标注不可用（纯展示型页面）。
 		view.Models = filterHiddenModels(
@@ -844,12 +844,38 @@ func filterHiddenModels(models []CampaignModelView, hidden map[string]struct{}) 
 //
 // 与 mergeCampaignModels 的区别：这里不做运营筛选、不覆盖展示名，只保证顺序稳定，
 // 让用户能扫完整个分组的模型；空清单返回 nil，前端据此隐藏区块。
-func catalogModels(models []CampaignModelView) []CampaignModelView {
+// catalogModels 返回广场全量模型，并按 entries 应用官方价覆盖。
+//
+// 官方价覆盖必须在广场这一层也生效：主推卡片走 mergeCampaignModels，
+// 而广场是独立的全量列表，只覆盖前者会出现「卡片有折扣、广场没有」。
+func catalogModels(models []CampaignModelView, entries []CampaignModelEntry) []CampaignModelView {
 	if len(models) == 0 {
 		return nil
 	}
+	overrides := make(map[string]CampaignModelEntry, len(entries))
+	for _, entry := range entries {
+		if entry.Model == "" {
+			continue
+		}
+		if entry.OfficialInputPrice != nil || entry.OfficialOutputPrice != nil {
+			overrides[strings.ToLower(entry.Model)] = entry
+		}
+	}
+
 	out := make([]CampaignModelView, len(models))
 	copy(out, models)
+	for i := range out {
+		entry, ok := overrides[strings.ToLower(out[i].Model)]
+		if !ok {
+			continue
+		}
+		if entry.OfficialInputPrice != nil {
+			out[i].OfficialInputPrice = entry.OfficialInputPrice
+		}
+		if entry.OfficialOutputPrice != nil {
+			out[i].OfficialOutputPrice = entry.OfficialOutputPrice
+		}
+	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Model != out[j].Model {
 			return out[i].Model < out[j].Model

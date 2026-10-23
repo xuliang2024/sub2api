@@ -53,6 +53,74 @@ function outputCell(model: CampaignModel): { official: string; ours: string } {
 function saving(model: CampaignModel): number {
   return discountPercent(model.input_price, model.official_input_price)
 }
+
+/** 分时模型的高峰倍率；无分时或倍率 <=1 时返回 1。 */
+function tierMultiplier(model: CampaignModel): number {
+  const periods = model.time_pricing ?? []
+  let max = 1
+  for (const period of periods) {
+    if (typeof period.multiplier === 'number' && period.multiplier > max) {
+      max = period.multiplier
+    }
+  }
+  return max
+}
+
+interface CatalogRow {
+  key: string
+  model: CampaignModel
+  tier?: 'offpeak' | 'peak'
+  inputOfficial: string
+  inputOurs: string
+  outputOfficial: string
+  outputOurs: string
+  cacheOurs: string
+  saving: number
+}
+
+/**
+ * 分时模型拆成两行（谷时 / 忙时）：官方价是不随档位变化的标价，
+ * 折扣按「相对标价」算，谷时更深、忙时等于常规折扣。
+ */
+const rows = computed<CatalogRow[]>(() => {
+  const out: CatalogRow[] = []
+  for (const model of filtered.value) {
+    const mult = tierMultiplier(model)
+    if (mult <= 1) {
+      out.push({
+        key: `${model.platform}-${model.model}`,
+        model,
+        inputOfficial: priceCell(model).official,
+        inputOurs: priceCell(model).ours,
+        outputOfficial: outputCell(model).official,
+        outputOurs: outputCell(model).ours,
+        cacheOurs:
+          model.cache_read_price != null ? formatPricePerMillion(model.cache_read_price) : '—',
+        saving: saving(model),
+      })
+      continue
+    }
+    for (const tier of ['offpeak', 'peak'] as const) {
+      const factor = tier === 'peak' ? mult : 1
+      const scale = (value?: number | null) => (typeof value === 'number' ? value * factor : undefined)
+      out.push({
+        key: `${model.platform}-${model.model}-${tier}`,
+        model,
+        tier,
+        inputOfficial: official(model.input_price, model.official_input_price),
+        inputOurs: formatPricePerMillion(scale(model.input_price)),
+        outputOfficial: official(model.output_price, model.official_output_price),
+        outputOurs: formatPricePerMillion(scale(model.output_price)),
+        cacheOurs:
+          model.cache_read_price != null
+            ? formatPricePerMillion(scale(model.cache_read_price))
+            : '—',
+        saving: discountPercent(scale(model.input_price), model.official_input_price),
+      })
+    }
+  }
+  return out
+})
 </script>
 
 <template>
@@ -87,35 +155,30 @@ function saving(model: CampaignModel): number {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="model in filtered" :key="`${model.platform}-${model.model}`">
+            <tr v-for="row in rows" :key="row.key">
               <td>
-                <div class="c-table-name">{{ model.display_name }}</div>
-                <div class="c-table-id">{{ model.model }}</div>
+                <div class="c-table-name">{{ row.model.display_name }}</div>
+                <div class="c-table-id">
+                  {{ row.model.model }}
+                  <span v-if="row.tier" class="c-tier-tag">
+                    {{ row.tier === 'peak' ? t('models.peakShort') : t('models.offpeak') }}
+                  </span>
+                </div>
               </td>
               <td class="c-table-price">
-                <s v-if="priceCell(model).official" class="c-table-official">
-                  {{ priceCell(model).official }}
-                </s>
-                <span class="c-table-ours">{{ priceCell(model).ours }}</span>
+                <s v-if="row.inputOfficial" class="c-table-official">{{ row.inputOfficial }}</s>
+                <span class="c-table-ours">{{ row.inputOurs }}</span>
               </td>
               <td class="c-table-price">
-                <s v-if="outputCell(model).official" class="c-table-official">
-                  {{ outputCell(model).official }}
-                </s>
-                <span class="c-table-ours">{{ outputCell(model).ours }}</span>
+                <s v-if="row.outputOfficial" class="c-table-official">{{ row.outputOfficial }}</s>
+                <span class="c-table-ours">{{ row.outputOurs }}</span>
               </td>
               <td class="c-table-price">
-                <span class="c-table-ours">
-                  {{
-                    model.cache_read_price != null
-                      ? formatPricePerMillion(model.cache_read_price)
-                      : '—'
-                  }}
-                </span>
+                <span class="c-table-ours">{{ row.cacheOurs }}</span>
               </td>
               <td>
-                <span v-if="saving(model)" class="c-discount">
-                  {{ t('models.save', { percent: saving(model) }) }}
+                <span v-if="row.saving" class="c-discount">
+                  {{ t('models.save', { percent: row.saving }) }}
                 </span>
                 <span v-else class="c-table-muted">—</span>
               </td>
