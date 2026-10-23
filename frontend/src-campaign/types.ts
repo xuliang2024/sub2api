@@ -15,6 +15,8 @@ export interface CampaignBrand {
   hide_auth?: boolean
   /** 主站控制台地址；配置后导航会显示「控制台」入口。 */
   console_url?: string
+  /** 分组对外展示名；中文分组名不该直接给海外用户看，留空则不在标题里提分组。 */
+  group_label?: string
 }
 
 export interface CampaignHero {

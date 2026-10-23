@@ -11,6 +11,8 @@ import { useCampaignMessages } from '../messages'
 const props = defineProps<{
   models: CampaignModel[]
   group?: CampaignGroup
+  /** 分组展示名（来自 brand.group_label）；为空则不在标题里提分组。 */
+  groupLabel?: string
   /** 分组全量模型数；大于卡片数时才提示「查看全部」。 */
   catalogCount?: number
 }>()
@@ -23,7 +25,8 @@ const t = useCampaignMessages()
 
 const subtitle = computed(() => {
   const base = t('models.subtitle')
-  return props.group ? `${base} ${t('models.group', { name: props.group.name })}` : base
+  const label = props.groupLabel?.trim()
+  return label ? `${base} ${t('models.group', { name: label })}` : base
 })
 
 interface PriceRow {
