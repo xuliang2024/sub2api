@@ -143,6 +143,11 @@ func (h *AuthHandler) emailOAuthCallback(c *gin.Context, provider string) {
 		redirectTo = emailOAuthDefaultRedirect
 	}
 
+	// 换 token 时的 redirect_uri 必须与授权请求时一致，否则上游返回
+	// redirect_uri_mismatch。start 已按请求域名解析过，这里要重算一次：
+	// callback 是独立请求，拿不到 start 时的上下文。
+	cfg.RedirectURL = resolveEmailOAuthRedirectURL(c, provider, cfg.RedirectURL)
+
 	tokenResp, err := exchangeEmailOAuthCode(c.Request.Context(), cfg, code)
 	if err != nil {
 		redirectOAuthError(c, frontendCallback, "token_exchange_failed", "failed to exchange oauth code", singleLine(err.Error()))
