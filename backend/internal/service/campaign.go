@@ -61,6 +61,9 @@ type CampaignBrand struct {
 	HideAuth bool   `json:"hide_auth,omitempty"`
 	// ConsoleURL 主站控制台地址；配置后落地页导航展示「控制台」入口。
 	ConsoleURL string `json:"console_url,omitempty"`
+	// GroupLabel 分组对外展示名。分组名多为内部命名（如「国产全模型」），
+	// 留空时落地页不展示分组，避免中文内部标识出现在海外页面上。
+	GroupLabel string `json:"group_label,omitempty"`
 }
 
 // CampaignHero 首屏配置。
