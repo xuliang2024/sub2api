@@ -107,6 +107,13 @@ export default defineConfig(({ mode }) => {
     outDir: '../backend/internal/web/dist',
     emptyOutDir: true,
     rollupOptions: {
+      // 双入口：index.html 是主站 SPA，campaign.html 是广告落地页。
+      // 落地页刻意独立成入口而不是主站里的一条路由——投放页需要自己的首屏、
+      // 自己的包体，也不能因为主站加功能而变慢。
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        campaign: resolve(__dirname, 'campaign.html')
+      },
       output: {
         /**
          * 手动分包配置

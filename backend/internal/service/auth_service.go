@@ -86,6 +86,20 @@ type AuthService struct {
 	affiliateService      *AffiliateService
 	defaultSubAssigner    DefaultSubscriptionAssigner
 	userPlatformQuotaRepo UserPlatformQuotaRepository
+	// campaignSignupHooks 广告落地页的注册后置钩子（归因 + 试用赠送）。
+	// 通过 SetCampaignSignupHooks 注入，避免 AuthService 直接依赖落地页服务，
+	// 也避开 DI 图中 AuthService 早于 CampaignService 构造的依赖顺序问题。
+	campaignSignupHooks CampaignSignupHooks
+}
+
+// SetCampaignSignupHooks 注入注册后的落地页钩子（可为 nil）。
+//
+// 该函数在路由装配阶段调用一次，必须在开始对外服务之前完成。
+func (s *AuthService) SetCampaignSignupHooks(hooks CampaignSignupHooks) {
+	if s == nil {
+		return
+	}
+	s.campaignSignupHooks = hooks
 }
 
 type CaptchaProof struct {
@@ -157,6 +171,36 @@ func (s *AuthService) SetAliyunCaptchaService(aliyunCaptchaService *AliyunCaptch
 // Register 用户注册，返回token和用户
 func (s *AuthService) Register(ctx context.Context, email, password string) (string, *User, error) {
 	return s.RegisterWithVerification(ctx, email, password, "", "", "", "")
+}
+
+// RegisterOptions 注册入参，额外携带广告落地页归因信息。
+type RegisterOptions struct {
+	Email          string
+	Password       string
+	VerifyCode     string
+	PromoCode      string
+	InvitationCode string
+	AffiliateCode  string
+	// CampaignSlug 广告落地页 slug；非空时注册成功后写入归因并按活动配置发放试用额度。
+	CampaignSlug string
+}
+
+// RegisterWithOptions 注册并在成功后执行落地页后置动作。
+//
+// 后置动作失败只记日志不影响注册结果：归因与赠送不能挡住用户注册。
+func (s *AuthService) RegisterWithOptions(ctx context.Context, opts RegisterOptions) (string, *User, error) {
+	token, user, err := s.RegisterWithVerification(
+		ctx, opts.Email, opts.Password, opts.VerifyCode, opts.PromoCode, opts.InvitationCode, opts.AffiliateCode)
+	if err != nil {
+		return "", nil, err
+	}
+	slug := strings.TrimSpace(opts.CampaignSlug)
+	if user != nil && slug != "" && s.campaignSignupHooks != nil {
+		if hookErr := s.campaignSignupHooks.OnCampaignSignup(ctx, user.ID, slug); hookErr != nil {
+			logger.LegacyPrintf("service.auth", "[Auth] campaign signup hook failed: %v", hookErr)
+		}
+	}
+	return token, user, nil
 }
 
 // RegisterWithVerification 用户注册（支持邮件验证、优惠码、邀请码和邀请返利码），返回token和用户。

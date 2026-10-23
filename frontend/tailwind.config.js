@@ -1,6 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
+  content: [
+    './index.html',
+    './campaign.html',
+    './src/**/*.{vue,js,ts,jsx,tsx}',
+    './src-campaign/**/*.{vue,js,ts,jsx,tsx}'
+  ],
   darkMode: 'class',
   theme: {
     extend: {

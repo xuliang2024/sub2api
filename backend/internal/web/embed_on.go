@@ -10,6 +10,7 @@ import (
 	htmlpkg "html"
 	"io"
 	"io/fs"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -34,6 +35,15 @@ type PublicSettingsProvider interface {
 	GetPublicSettingsForInjection(ctx context.Context) (any, error)
 }
 
+// CampaignHostResolver 判断某个域名是否绑定了已上线的广告落地页。
+//
+// 定义在 web 包而不是引用 service 包，避免 transport 层反向依赖业务层实现。
+// 返回 false（含解析失败）时一律回落到主站 index.html——落地页分流绝不能
+// 把主站打挂，因此这里 fail-open 到主站。
+type CampaignHostResolver interface {
+	IsActiveCampaignHost(ctx context.Context, host string) bool
+}
+
 // FrontendServer serves the embedded frontend with settings injection
 type FrontendServer struct {
 	distFS      fs.FS
@@ -42,6 +52,12 @@ type FrontendServer struct {
 	cache       *HTMLCache
 	settings    PublicSettingsProvider
 	overrideDir string // local file override directory
+
+	// campaignHTML 第二个前端入口（广告落地页）。为空表示该构建未包含 campaign.html，
+	// 此时所有域名都回落到主站 index.html。
+	campaignHTML   []byte
+	campaignCache  *HTMLCache
+	campaignHosts  CampaignHostResolver
 }
 
 // NewFrontendServer creates a new frontend server with settings injection
@@ -66,14 +82,55 @@ func NewFrontendServer(settingsProvider PublicSettingsProvider) (*FrontendServer
 	cache := NewHTMLCache()
 	cache.SetBaseHTML(baseHTML)
 
-	return &FrontendServer{
+	server := &FrontendServer{
 		distFS:      distFS,
 		fileServer:  http.FileServer(http.FS(distFS)),
 		baseHTML:    baseHTML,
 		cache:       cache,
 		settings:    settingsProvider,
 		overrideDir: filepath.Join("data", "public"),
-	}, nil
+	}
+	server.loadCampaignShell()
+	return server, nil
+}
+
+// loadCampaignShell 读取可选的 campaign.html 第二入口。
+//
+// 构建未包含该入口（例如只产出了主站）时静默跳过：落地页分流是附加能力，
+// 不能因为它让主站起不来。
+func (s *FrontendServer) loadCampaignShell() {
+	if s == nil || s.distFS == nil {
+		return
+	}
+	file, err := s.distFS.Open("campaign.html")
+	if err != nil {
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	content, err := io.ReadAll(file)
+	if err != nil || len(content) == 0 {
+		return
+	}
+	campaignCache := NewHTMLCache()
+	campaignCache.SetBaseHTML(content)
+	s.campaignHTML = content
+	s.campaignCache = campaignCache
+}
+
+// SetCampaignHostResolver 注入域名 -> 落地页的判定器。
+//
+// 必须在服务启动后、对外提供请求前调用；未注入时所有域名都走主站入口。
+func (s *FrontendServer) SetCampaignHostResolver(resolver CampaignHostResolver) {
+	if s == nil {
+		return
+	}
+	s.campaignHosts = resolver
+}
+
+// HasCampaignShell 表示本次构建是否包含落地页入口。
+func (s *FrontendServer) HasCampaignShell() bool {
+	return s != nil && len(s.campaignHTML) > 0
 }
 
 // InvalidateCache invalidates the HTML cache (call when settings change)
@@ -99,9 +156,9 @@ func (s *FrontendServer) Middleware() gin.HandlerFunc {
 			cleanPath = "index.html"
 		}
 
-		// For index.html or SPA routes, serve with injected settings
-		if cleanPath == "index.html" || !s.fileExists(cleanPath) {
-			s.serveIndexHTML(c)
+		// For index.html / campaign.html / SPA routes, serve the shell with injected settings
+		if cleanPath == "index.html" || cleanPath == "campaign.html" || !s.fileExists(cleanPath) {
+			s.serveShellHTML(c, s.shellFor(c))
 			return
 		}
 
@@ -126,6 +183,48 @@ func (s *FrontendServer) fileExists(path string) bool {
 	return true
 }
 
+// shellFor 决定本次请求使用哪个前端入口。
+//
+// 判定全部在服务端完成（而不是让前端按 location.host 自己跳），原因：
+//   - 落地页域名打开时首屏必须是落地页，不能先加载主站 SPA 再跳转；
+//   - 主站与落地页是两个独立的 Vite entry，包体互不影响。
+//
+// 任何异常（未构建 campaign.html、解析器未注入、查询失败）都回落到 index.html。
+func (s *FrontendServer) shellFor(c *gin.Context) string {
+	if len(s.campaignHTML) == 0 || s.campaignHosts == nil {
+		return "index.html"
+	}
+	host := requestHostForCampaign(c)
+	if host == "" {
+		return "index.html"
+	}
+	if !s.campaignHosts.IsActiveCampaignHost(c.Request.Context(), host) {
+		return "index.html"
+	}
+	return "campaign.html"
+}
+
+// requestHostForCampaign 取请求域名（优先 X-Forwarded-Host，去掉端口）。
+func requestHostForCampaign(c *gin.Context) string {
+	raw := strings.TrimSpace(c.GetHeader("X-Forwarded-Host"))
+	if raw != "" {
+		if idx := strings.Index(raw, ","); idx >= 0 {
+			raw = raw[:idx]
+		}
+	} else {
+		raw = c.Request.Host
+	}
+	raw = strings.TrimSpace(strings.ToLower(raw))
+	if raw == "" {
+		return ""
+	}
+	if host, _, err := net.SplitHostPort(raw); err == nil {
+		raw = host
+	}
+	raw = strings.TrimSuffix(raw, ".")
+	return strings.TrimPrefix(strings.TrimSuffix(raw, "]"), "[")
+}
+
 // tryServeOverride checks if a local override file exists and serves it.
 // Files in overrideDir take precedence over embedded files.
 func (s *FrontendServer) tryServeOverride(c *gin.Context, cleanPath string) bool {
@@ -142,12 +241,29 @@ func (s *FrontendServer) tryServeOverride(c *gin.Context, cleanPath string) bool
 	return true
 }
 
+// injectSettings 保留为单测入口：按主站 shell 注入公开配置。
+//
+// 业务请求走 injectSettingsInto（需要区分主站/落地页），此包装只用于既有测试。
+func (s *FrontendServer) injectSettings(settingsJSON []byte) []byte {
+	return injectSettingsInto(s.baseHTML, settingsJSON, true)
+}
+
+// serveIndexHTML 保留为单测入口：按主站 shell 渲染 index.html。
 func (s *FrontendServer) serveIndexHTML(c *gin.Context) {
+	s.serveShellHTML(c, "index.html")
+}
+
+func (s *FrontendServer) serveShellHTML(c *gin.Context, shell string) {
+	baseHTML, cache := s.baseHTML, s.cache
+	if shell == "campaign.html" && len(s.campaignHTML) > 0 && s.campaignCache != nil {
+		baseHTML, cache = s.campaignHTML, s.campaignCache
+	}
+
 	// Get nonce from context (generated by SecurityHeaders middleware)
 	nonce := middleware.GetNonceFromContext(c)
 
 	// Check cache first
-	cached := s.cache.Get()
+	cached := cache.Get()
 	if cached != nil {
 		// Check If-None-Match for 304 response
 		if match := c.GetHeader("If-None-Match"); match == cached.ETag {
@@ -173,7 +289,7 @@ func (s *FrontendServer) serveIndexHTML(c *gin.Context) {
 	settings, err := s.settings.GetPublicSettingsForInjection(ctx)
 	if err != nil {
 		// Fallback: serve without injection
-		c.Data(http.StatusOK, "text/html; charset=utf-8", s.baseHTML)
+		c.Data(http.StatusOK, "text/html; charset=utf-8", baseHTML)
 		c.Abort()
 		return
 	}
@@ -181,18 +297,18 @@ func (s *FrontendServer) serveIndexHTML(c *gin.Context) {
 	settingsJSON, err := json.Marshal(settings)
 	if err != nil {
 		// Fallback: serve without injection
-		c.Data(http.StatusOK, "text/html; charset=utf-8", s.baseHTML)
+		c.Data(http.StatusOK, "text/html; charset=utf-8", baseHTML)
 		c.Abort()
 		return
 	}
 
-	rendered := s.injectSettings(settingsJSON)
-	s.cache.Set(rendered, settingsJSON)
+	rendered := injectSettingsInto(baseHTML, settingsJSON, shell != "campaign.html")
+	cache.Set(rendered, settingsJSON)
 
 	// Replace nonce placeholder with actual nonce before serving
 	content := replaceNoncePlaceholder(rendered, nonce)
 
-	cached = s.cache.Get()
+	cached = cache.Get()
 	if cached != nil {
 		c.Header("ETag", cached.ETag)
 	}
@@ -201,17 +317,24 @@ func (s *FrontendServer) serveIndexHTML(c *gin.Context) {
 	c.Abort()
 }
 
-func (s *FrontendServer) injectSettings(settingsJSON []byte) []byte {
+// injectSettingsInto 把公开配置与品牌信息注入任意前端 shell。
+//
+// 抽成包级函数是因为现在有两个入口（index.html / campaign.html），注入逻辑一致，
+// 差别只在 base HTML。applySiteTitle 对落地页为 false：落地页的标题由活动自己的
+// SEO 配置在客户端设置，服务端不该把它改成主站的「站点名 - AI API Gateway」。
+func injectSettingsInto(baseHTML, settingsJSON []byte, applySiteTitle bool) []byte {
 	// Create the script tag to inject with nonce placeholder
 	// The placeholder will be replaced with actual nonce at request time
 	script := []byte(`<script nonce="` + NonceHTMLPlaceholder + `">window.__APP_CONFIG__=` + string(settingsJSON) + `;</script>`)
 
 	// Inject before </head>
 	headClose := []byte("</head>")
-	result := bytes.Replace(s.baseHTML, headClose, append(script, headClose...), 1)
+	result := bytes.Replace(baseHTML, headClose, append(script, headClose...), 1)
 
 	// Apply custom branding before the browser paints the static defaults.
-	result = injectSiteTitle(result, settingsJSON)
+	if applySiteTitle {
+		result = injectSiteTitle(result, settingsJSON)
+	}
 	result = injectSiteFavicon(result, settingsJSON)
 
 	return result
