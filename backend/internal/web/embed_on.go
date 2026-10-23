@@ -55,9 +55,9 @@ type FrontendServer struct {
 
 	// campaignHTML 第二个前端入口（广告落地页）。为空表示该构建未包含 campaign.html，
 	// 此时所有域名都回落到主站 index.html。
-	campaignHTML   []byte
-	campaignCache  *HTMLCache
-	campaignHosts  CampaignHostResolver
+	campaignHTML  []byte
+	campaignCache *HTMLCache
+	campaignHosts CampaignHostResolver
 }
 
 // NewFrontendServer creates a new frontend server with settings injection
@@ -308,6 +308,12 @@ func (s *FrontendServer) serveShellHTML(c *gin.Context, shell string) {
 	// Replace nonce placeholder with actual nonce before serving
 	content := replaceNoncePlaceholder(rendered, nonce)
 
+	// 法务页给爬虫与审核一个像样的标题：页面正文是客户端渲染的，
+	// 这里只改 <title>，不动缓存（缓存的是整壳，标题按路径后处理）。
+	if title := legalPageTitle(c.Request.URL.Path); title != "" {
+		content = replaceDocumentTitle(content, title)
+	}
+
 	cached = cache.Get()
 	if cached != nil {
 		c.Header("ETag", cached.ETag)
@@ -338,6 +344,39 @@ func injectSettingsInto(baseHTML, settingsJSON []byte, applySiteTitle bool) []by
 	result = injectSiteFavicon(result, settingsJSON)
 
 	return result
+}
+
+// legalPageTitle 返回法务页的服务端标题；非该路径返回空串。
+func legalPageTitle(path string) string {
+	switch strings.TrimRight(path, "/") {
+	case "/privacy":
+		return "Privacy Policy"
+	case "/terms":
+		return "Terms of Service"
+	default:
+		return ""
+	}
+}
+
+// replaceDocumentTitle 把 HTML 里第一个 <title>…</title> 换成给定标题。
+func replaceDocumentTitle(html []byte, title string) []byte {
+	start := bytes.Index(html, []byte("<title>"))
+	if start == -1 {
+		return html
+	}
+	endOffset := bytes.Index(html[start:], []byte("</title>"))
+	if endOffset == -1 {
+		return html
+	}
+	end := start + endOffset + len("</title>")
+	replacement := []byte("<title>" + htmlpkg.EscapeString(title) + "</title>")
+
+	var buf bytes.Buffer
+	buf.Grow(len(html) - (end - start) + len(replacement))
+	buf.Write(html[:start])
+	buf.Write(replacement)
+	buf.Write(html[end:])
+	return buf.Bytes()
 }
 
 // injectSiteFavicon replaces the static favicon with a configured, browser-safe image URL.
