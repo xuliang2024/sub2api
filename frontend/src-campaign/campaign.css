@@ -406,6 +406,36 @@ body {
   gap: 8px;
 }
 
+/* 分时模型：官方价 + 谷时 + 忙时 四列 */
+.c-price-head.c-price-head--tier,
+.c-price-row.c-price-row--tier {
+  grid-template-columns: minmax(52px, auto) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.c-price-head.c-price-head--tier > span:nth-child(4),
+.c-price-row.c-price-row--tier > span:nth-child(4) {
+  text-align: right;
+}
+
+.c-tier-savings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.c-tier-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--c-bg-soft);
+  color: var(--c-text-soft);
+  font-size: 10px;
+  line-height: 16px;
+  vertical-align: middle;
+}
+
 .c-price-head {
   font-size: 11px;
   color: var(--c-text-soft);

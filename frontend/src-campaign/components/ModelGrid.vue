@@ -92,8 +92,57 @@ function hasPrice(model: CampaignModel): boolean {
   )
 }
 
+/** 分时模型的高峰倍率；无分时或倍率 <=1 时返回 1。 */
+function tierMultiplier(model: CampaignModel): number {
+  const periods = model.time_pricing ?? []
+  let max = 1
+  for (const period of periods) {
+    if (typeof period.multiplier === 'number' && period.multiplier > max) {
+      max = period.multiplier
+    }
+  }
+  return max
+}
+
+function isTiered(model: CampaignModel): boolean {
+  return tierMultiplier(model) > 1
+}
+
+/** 谷时/忙时各档的「我们的价格」；官方价用标价（不随档位变化）。 */
+function tierRows(model: CampaignModel): { label: string; official: string; offpeak: string; peak: string }[] {
+  const mult = tierMultiplier(model)
+  const scale = (value?: number | null) => (typeof value === 'number' ? value * mult : undefined)
+  return [
+    {
+      label: t('models.input'),
+      official: officialCell(model.input_price, model.official_input_price),
+      offpeak: formatPricePerMillion(model.input_price),
+      peak: formatPricePerMillion(scale(model.input_price)),
+    },
+    {
+      label: t('models.output'),
+      official: officialCell(model.output_price, model.official_output_price),
+      offpeak: formatPricePerMillion(model.output_price),
+      peak: formatPricePerMillion(scale(model.output_price)),
+    },
+    {
+      label: t('models.cacheRead'),
+      official: '',
+      offpeak: model.cache_read_price != null ? formatPricePerMillion(model.cache_read_price) : '—',
+      peak:
+        model.cache_read_price != null ? formatPricePerMillion(scale(model.cache_read_price)) : '—',
+    },
+  ]
+}
+
 function saving(model: CampaignModel): number {
   return discountPercent(model.input_price, model.official_input_price)
+}
+
+/** 分时模型的折扣按「相对官方标价」算：谷时更深，忙时等于常规折扣。 */
+function tierSaving(model: CampaignModel, peak: boolean): number {
+  const price = peak ? (model.input_price ?? 0) * tierMultiplier(model) : model.input_price
+  return discountPercent(price, model.official_input_price)
 }
 
 function peakNote(model: CampaignModel): string {
@@ -142,7 +191,32 @@ function peakNote(model: CampaignModel): string {
             {{ t('models.unavailable') }}
           </p>
 
-          <div v-if="hasPrice(model)" class="c-price-table">
+          <div v-if="hasPrice(model) && isTiered(model)" class="c-price-table">
+            <div class="c-price-head c-price-head--tier">
+              <span></span>
+              <span>{{ t('models.officialPrice') }}</span>
+              <span>{{ t('models.offpeak') }}</span>
+              <span>{{ t('models.peakShort') }}</span>
+            </div>
+            <div v-for="row in tierRows(model)" :key="row.label" class="c-price-row c-price-row--tier">
+              <span class="c-price-label">{{ row.label }}</span>
+              <span class="c-price-official" :class="{ 'is-blank': !row.official }">
+                {{ row.official }}
+              </span>
+              <span class="c-price-value">{{ row.offpeak }}</span>
+              <span class="c-price-value">{{ row.peak }}</span>
+            </div>
+            <div class="c-tier-savings">
+              <span class="c-discount">
+                {{ t('models.offpeak') }} {{ t('models.save', { percent: tierSaving(model, false) }) }}
+              </span>
+              <span class="c-discount">
+                {{ t('models.peakShort') }} {{ t('models.save', { percent: tierSaving(model, true) }) }}
+              </span>
+            </div>
+          </div>
+
+          <div v-else-if="hasPrice(model)" class="c-price-table">
             <div class="c-price-head">
               <span></span>
               <span>{{ t('models.officialPrice') }}</span>
@@ -158,7 +232,7 @@ function peakNote(model: CampaignModel): string {
           </div>
 
           <div class="c-model-foot">
-            <span v-if="saving(model)" class="c-discount">
+            <span v-if="saving(model) && !isTiered(model)" class="c-discount">
               {{ t('models.save', { percent: saving(model) }) }}
             </span>
             <span
