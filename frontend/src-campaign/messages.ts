@@ -741,6 +741,16 @@ const th: Dict = {
   'integration.copy': 'คัดลอก',
   'integration.copied': 'คัดลอกแล้ว',
 
+  'agents.title': 'เอเจนต์เขียนโค้ด',
+  'agents.subtitle':
+    'Codex, Claude Code, Aider และ Cline ใช้คีย์เดียวกันได้ คัดลอกการตั้งค่าแล้วเริ่มใช้งานได้เลย',
+  'agents.note.codex':
+    'อ่านผู้ให้บริการจาก ~/.codex/config.toml และเชื่อมต่อผ่าน Chat Completions',
+  'agents.note.claude':
+    'ใช้โปรโตคอล Anthropic Messages ตั้งค่าด้วยตัวแปรสภาพแวดล้อม 3 ตัว ไม่ต้องแก้ไฟล์ config',
+  'agents.note.aider': 'เชื่อมต่อผ่านโปรโตคอล OpenAI ด้วยตัวแปรสภาพแวดล้อม 2 ตัว แล้วระบุโมเดลในคำสั่ง',
+  'agents.note.cline': 'ในส่วนขยาย VS Code เลือก OpenAI Compatible แล้วกรอกสี่ช่องนี้',
+
   'cta.defaultLabel': 'รับ API key',
   'cta.defaultSublabel': 'สมัครแล้วรับคีย์ทันที เริ่มเรียกใช้ได้ในไม่กี่นาที',
 
