@@ -84,6 +84,14 @@ type CampaignModelEntry struct {
 	Badge       string `json:"badge,omitempty"`
 	Featured    bool   `json:"featured,omitempty"`
 	Order       int    `json:"order,omitempty"`
+	// OfficialInputPrice/OfficialOutputPrice 覆盖官方价（USD/token）。
+	//
+	// 平台展示的官方价默认取「计费口径」的刊例价，但个别模型两者不等价：
+	// 例如 deepseek-v4-pro 自 2026-09-14 起被上游按 Flash 价路由计费，
+	// 计费口径会返回 Flash 的价，比我们售价还低，页面就不显示折扣了。
+	// 需要按厂商公布价展示时在这里显式覆盖。
+	OfficialInputPrice  *float64 `json:"official_input_price,omitempty"`
+	OfficialOutputPrice *float64 `json:"official_output_price,omitempty"`
 }
 
 // CampaignCodeSample 接入示例；Code 中支持 {{BASE_URL}} / {{API_KEY}} / {{MODEL}} 占位。
@@ -896,6 +904,12 @@ func mergeCampaignModels(entries []CampaignModelEntry, available []CampaignModel
 		}
 		if entry.Badge != "" {
 			view.Badge = entry.Badge
+		}
+		if entry.OfficialInputPrice != nil {
+			view.OfficialInputPrice = entry.OfficialInputPrice
+		}
+		if entry.OfficialOutputPrice != nil {
+			view.OfficialOutputPrice = entry.OfficialOutputPrice
 		}
 		view.Featured = entry.Featured
 		items = append(items, ordered{view: view, order: entry.Order, index: i})
