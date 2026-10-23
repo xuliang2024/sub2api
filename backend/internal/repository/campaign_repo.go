@@ -29,7 +29,7 @@ func NewCampaignRepository(client *dbent.Client, sqlDB *sql.DB) service.Campaign
 
 const campaignSelectColumns = `
 	id, slug, name, status, COALESCE(host, '') AS host, group_id, locale,
-	brand, hero, content_md, model_entries, code_samples, cta, trial, seo, translations,
+	brand, hero, content_md, model_entries, code_samples, cta, trial, seo, translations, hidden_models,
 	created_by, created_at, updated_at`
 
 // GetByID 按主键查询。
