@@ -29,6 +29,9 @@ type UsageLogRepository interface {
 	// inserted is false when the insert was skipped due to conflict (idempotent retries).
 	Create(ctx context.Context, log *UsageLog) (inserted bool, err error)
 	GetByID(ctx context.Context, id int64) (*UsageLog, error)
+	// GetByRequestIDAndAPIKey 按 (request_id, api_key_id) 精确取一条账单。
+	// api_key_id 是安全边界，必须与 request_id 同时作为条件；未命中返回 ErrUsageLogNotFound。
+	GetByRequestIDAndAPIKey(ctx context.Context, requestID string, apiKeyID int64) (*UsageLog, error)
 	Delete(ctx context.Context, id int64) error
 
 	ListByUser(ctx context.Context, userID int64, params pagination.PaginationParams) ([]UsageLog, *pagination.PaginationResult, error)

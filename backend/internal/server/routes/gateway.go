@@ -184,6 +184,8 @@ func RegisterGatewayRoutes(
 	gateway.Use(endpointNorm)
 	gateway.Use(gin.HandlerFunc(apiKeyAuth))
 	gateway.GET("/sub2api/billing", h.Gateway.KeyBillingInfo)
+	// 单笔账单查询：必须留在下面三个模型路由中间件之前，否则会被当成模型请求拦掉。
+	gateway.GET("/sub2api/usage/:request_id", h.Gateway.UsageRecord)
 	gateway.Use(groupModelAllowlist)
 	gateway.Use(compositeTarget)
 	gateway.Use(requireGroupAnthropic)
