@@ -88,6 +88,8 @@ func (h *AuthHandler) emailOAuthStart(c *gin.Context, provider string) {
 		emailOAuthClearCookie(c, emailOAuthAffiliateCookie, secureCookie)
 	}
 
+	cfg.RedirectURL = resolveEmailOAuthRedirectURL(c, provider, cfg.RedirectURL)
+
 	authURL, err := buildEmailOAuthAuthorizeURL(cfg, state)
 	if err != nil {
 		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_BUILD_URL_FAILED", "failed to build oauth authorization url").WithCause(err))
@@ -449,6 +451,42 @@ func (h *AuthHandler) getEmailOAuthConfig(ctx context.Context, provider string) 
 		return h.settingSvc.GetEmailOAuthProviderConfig(ctx, provider)
 	}
 	return config.EmailOAuthProviderConfig{}, infraerrors.ServiceUnavailable("CONFIG_NOT_READY", "config not loaded")
+}
+
+// resolveEmailOAuthRedirectURL 让 OAuth 回调落在「发起登录的那个域名」上。
+//
+// 一套服务对多个域名时（示例：codex.apiz.ai 与 cn.apiz.ai），state 存在发起域名的
+// cookie 里；若回调固定跳到另一个域名，cookie 带不过去，回调必然 invalid_state。
+// 因此当请求域名与配置的回调域名不一致时，按请求域名推导回调地址——
+// 前提是该地址已在上游（Google / GitHub）登记过，否则会报 redirect_uri_mismatch。
+func resolveEmailOAuthRedirectURL(c *gin.Context, provider, configured string) string {
+	host := strings.TrimSpace(c.GetHeader("X-Forwarded-Host"))
+	if idx := strings.Index(host, ","); idx >= 0 {
+		host = host[:idx]
+	}
+	if host == "" {
+		host = c.Request.Host
+	}
+	host = strings.ToLower(strings.TrimSpace(host))
+	if host == "" {
+		return configured
+	}
+
+	scheme := "http"
+	if isRequestHTTPS(c) {
+		scheme = "https"
+	}
+	derived := scheme + "://" + host + "/api/v1/auth/oauth/" + provider + "/callback"
+
+	configured = strings.TrimSpace(configured)
+	if configured == "" {
+		return derived
+	}
+	parsed, err := url.Parse(configured)
+	if err != nil || !strings.EqualFold(parsed.Host, host) {
+		return derived
+	}
+	return configured
 }
 
 func buildEmailOAuthAuthorizeURL(cfg config.EmailOAuthProviderConfig, state string) (string, error) {

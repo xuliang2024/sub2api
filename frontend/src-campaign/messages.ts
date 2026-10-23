@@ -155,6 +155,8 @@ const en: Dict = {
   'auth.close': 'Close',
   'auth.registrationClosed':
     'Sign-ups are closed on this site. Please log in with an existing account.',
+  'auth.or': 'or',
+  'auth.continueWithGoogle': 'Continue with Google',
   'auth.captchaNotice':
     'Human verification is enabled. If sign-up fails here, create the account on the main site and log in again.',
   'auth.emailRequired': 'Enter your email and password',
@@ -306,6 +308,8 @@ const zh: Dict = {
   'auth.processing': '处理中…',
   'auth.close': '关闭',
   'auth.registrationClosed': '当前站点暂未开放注册，请使用已有账号登录。',
+  'auth.or': '或',
+  'auth.continueWithGoogle': '使用 Google 账号继续',
   'auth.captchaNotice': '本站已开启人机校验，如注册失败请前往主站注册后返回登录。',
   'auth.emailRequired': '请填写邮箱与密码',
   'auth.verifyRequired': '请填写邮箱验证码',
@@ -460,6 +464,8 @@ const ja: Dict = {
   'auth.close': '閉じる',
   'auth.registrationClosed':
     '現在このサイトでは新規登録を受け付けていません。既存のアカウントでログインしてください。',
+  'auth.or': 'または',
+  'auth.continueWithGoogle': 'Google で続ける',
   'auth.captchaNotice':
     '人間確認が有効です。登録に失敗する場合はメインサイトで登録したうえでログインしてください。',
   'auth.emailRequired': 'メールアドレスとパスワードを入力してください',
@@ -615,6 +621,8 @@ const ko: Dict = {
   'auth.processing': '처리 중…',
   'auth.close': '닫기',
   'auth.registrationClosed': '현재 이 사이트는 회원가입이 닫혀 있습니다. 기존 계정으로 로그인하세요.',
+  'auth.or': '또는',
+  'auth.continueWithGoogle': 'Google 계정으로 계속',
   'auth.captchaNotice':
     '사람 확인이 켜져 있습니다. 가입이 실패하면 메인 사이트에서 가입한 뒤 다시 로그인하세요.',
   'auth.emailRequired': '이메일과 비밀번호를 입력하세요',
@@ -770,6 +778,8 @@ const th: Dict = {
   'auth.processing': 'กำลังดำเนินการ…',
   'auth.close': 'ปิด',
   'auth.registrationClosed': 'ขณะนี้ปิดรับสมัครสมาชิก กรุณาเข้าสู่ระบบด้วยบัญชีเดิม',
+  'auth.or': 'หรือ',
+  'auth.continueWithGoogle': 'ดำเนินการต่อด้วย Google',
   'auth.captchaNotice':
     'เปิดการยืนยันตัวตนแล้ว หากสมัครไม่สำเร็จ กรุณาสมัครที่เว็บหลักแล้วกลับมาเข้าสู่ระบบ',
   'auth.emailRequired': 'กรุณากรอกอีเมลและรหัสผ่าน',

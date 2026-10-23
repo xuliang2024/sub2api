@@ -142,6 +142,7 @@ export interface CampaignUser {
 export interface CampaignAppConfig {
   registration_enabled?: boolean
   email_verify_enabled?: boolean
+  google_oauth_enabled?: boolean
   promo_code_enabled?: boolean
   turnstile_enabled?: boolean
   turnstile_site_key?: string

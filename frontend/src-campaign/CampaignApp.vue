@@ -8,7 +8,7 @@ import type {
   CampaignView,
 } from './types'
 import { claimKey, describeError, fetchCampaign } from './api'
-import { clearSession, getStoredUser, getToken } from './session'
+import { clearSession, getStoredUser, getToken, saveSession } from './session'
 import { primaryModelName } from './format'
 import {
   CampaignMessagesKey,
@@ -117,6 +117,33 @@ const heroView = computed<CampaignHero>(() => {
 const contentMarkdown = computed(
   () => localeContent.value?.content_md || campaign.value?.content_md || '',
 )
+
+/**
+ * OAuth 回调带回来的 token 在 URL fragment 里：
+ * 后端 302 到 /auth/oauth/callback#access_token=...&refresh_token=...&expires_in=...
+ * 落地页没有路由，所以启动时先把 token 落库，再把地址还原成首页。
+ */
+function consumeOAuthFragment(): void {
+  const raw = window.location.hash.replace(/^#/, '')
+  if (!raw) {
+    return
+  }
+  const params = new URLSearchParams(raw)
+  const token = params.get('access_token')
+  if (!token) {
+    return
+  }
+  const expiresIn = Number(params.get('expires_in'))
+  saveSession({
+    access_token: token,
+    refresh_token: params.get('refresh_token') || undefined,
+    expires_in: Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : undefined,
+  })
+  const path = window.location.pathname.replace(/\/auth\/oauth\/callback\/?$/, '/')
+  window.history.replaceState(null, '', path + window.location.search)
+}
+
+consumeOAuthFragment()
 
 const user = ref<CampaignUser | null>(getStoredUser())
 

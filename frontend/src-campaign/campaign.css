@@ -609,6 +609,38 @@ body {
   color: var(--c-text-soft);
 }
 
+/* Google 登录入口 */
+.c-oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 10px;
+  font-size: 12px;
+  color: var(--c-text-soft);
+}
+
+.c-oauth-divider::before,
+.c-oauth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.c-oauth-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.c-oauth-glyph {
+  font-weight: 700;
+  font-size: 15px;
+  color: #4285f4;
+}
+
 /* 控制台 */
 .c-stat-grid {
   display: grid;
