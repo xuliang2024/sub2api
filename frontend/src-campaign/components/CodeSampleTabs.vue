@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import type { CampaignCodeSample } from '../types'
 import { copyText, fillSample, type SampleContext } from '../format'
 import { useCampaignMessages } from '../messages'
+import AgentSetup from './AgentSetup.vue'
 
 const props = defineProps<{
   samples: CampaignCodeSample[]
@@ -103,6 +104,8 @@ async function handleCopy(): Promise<void> {
           <pre><code>{{ activeCode }}</code></pre>
         </div>
       </div>
+
+      <AgentSetup :context="context" />
     </div>
   </section>
 </template>
