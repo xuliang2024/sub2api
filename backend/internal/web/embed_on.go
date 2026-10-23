@@ -274,6 +274,10 @@ func (s *FrontendServer) serveShellHTML(c *gin.Context, shell string) {
 
 		// Replace nonce placeholder with actual nonce before serving
 		content := replaceNoncePlaceholder(cached.Content, nonce)
+		// 标题按路径后处理，缓存命中时同样要替换，否则只有首个请求的页面标题正确。
+		if title := legalPageTitle(c.Request.URL.Path); title != "" {
+			content = replaceDocumentTitle(content, title)
+		}
 
 		c.Header("ETag", cached.ETag)
 		c.Header("Cache-Control", "no-cache") // Must revalidate
