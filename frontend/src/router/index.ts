@@ -30,6 +30,27 @@ const routes: RouteRecordRaw[] = [
   },
 
   // ==================== Public Routes ====================
+  // 法务页：Google OAuth 品牌审核会直接访问这两个地址，必须真实可读。
+  {
+    path: '/privacy',
+    name: 'Privacy',
+    component: () => import('@/views/legal/LegalDocumentView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Privacy Policy',
+      doc: 'privacy'
+    }
+  },
+  {
+    path: '/terms',
+    name: 'Terms',
+    component: () => import('@/views/legal/LegalDocumentView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Terms of Service',
+      doc: 'terms'
+    }
+  },
   {
     path: '/home',
     name: 'Home',
