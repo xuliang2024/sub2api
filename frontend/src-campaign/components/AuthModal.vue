@@ -13,6 +13,14 @@ const props = defineProps<{
   trialNote?: string
 }>()
 
+const googleEnabled = computed(
+  () => props.config?.google_oauth_enabled === true,
+)
+
+// 后端 start 接口会 302 到 Google；redirect 参数决定登录后回到落地页首页。
+const googleStartUrl = '/api/v1/auth/oauth/google/start?redirect=/'
+
+
 const emit = defineEmits<{
   (event: 'close'): void
   (event: 'success', payload: { user?: CampaignUser; isNew: boolean }): void
@@ -232,6 +240,14 @@ async function handleSubmit(): Promise<void> {
         <p v-if="captchaEnabled" class="c-note mt-3">{{ t('auth.captchaNotice') }}</p>
 
         <p v-if="errorMessage" class="c-error">{{ errorMessage }}</p>
+
+        <template v-if="googleEnabled">
+          <div class="c-oauth-divider"><span>{{ t('auth.or') }}</span></div>
+          <a class="c-btn c-btn-ghost w-full c-oauth-btn" :href="googleStartUrl">
+            <span class="c-oauth-glyph" aria-hidden="true">G</span>
+            {{ t('auth.continueWithGoogle') }}
+          </a>
+        </template>
 
         <button class="c-btn c-btn-primary mt-5 w-full" type="submit" :disabled="submitting">
           {{
