@@ -875,6 +875,14 @@ func catalogModels(models []CampaignModelView, entries []CampaignModelEntry) []C
 		if entry.OfficialOutputPrice != nil {
 			out[i].OfficialOutputPrice = entry.OfficialOutputPrice
 		}
+		// 展示名与卖点同样要带到广场，否则列表里是裸 model id，
+		// 和下面一行的小字重复。
+		if entry.DisplayName != "" {
+			out[i].DisplayName = entry.DisplayName
+		}
+		if entry.Tagline != "" {
+			out[i].Tagline = entry.Tagline
+		}
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Model != out[j].Model {

@@ -125,6 +125,16 @@ const en: Dict = {
   'integration.copy': 'Copy',
   'integration.copied': 'Copied',
 
+  'agents.title': 'Coding agents',
+  'agents.subtitle':
+    'Codex, Claude Code, Aider and Cline run on this key too. Copy a snippet, start the agent.',
+  'agents.note.codex':
+    'Reads providers from ~/.codex/config.toml, using the Chat Completions wire format — tools work as usual.',
+  'agents.note.claude':
+    'Speaks the Anthropic Messages protocol. Three env vars, no config file to edit.',
+  'agents.note.aider': 'OpenAI protocol in two env vars; name the model on the command line.',
+  'agents.note.cline': 'In the VS Code extension pick OpenAI Compatible and fill these four fields.',
+
   'cta.defaultLabel': 'Get your API key',
   'cta.defaultSublabel': 'Sign up, get a key instantly, start calling in minutes.',
 
@@ -269,6 +279,14 @@ const zh: Dict = {
   'integration.copy': '复制',
   'integration.copied': '已复制',
 
+  'agents.title': '编码 Agent 接入',
+  'agents.subtitle': 'Codex、Claude Code、Aider、Cline 用同一把 Key。复制配置，直接启动。',
+  'agents.note.codex':
+    '从 ~/.codex/config.toml 读取 provider，走 Chat Completions 协议，工具调用照常。',
+  'agents.note.claude': '走 Anthropic Messages 协议，三个环境变量即可，不用改配置文件。',
+  'agents.note.aider': '两个环境变量接入 OpenAI 协议，模型在命令行里指定。',
+  'agents.note.cline': 'VS Code 插件里选 OpenAI Compatible，填这四项即可。',
+
   'cta.defaultLabel': '立即领取 API Key',
   'cta.defaultSublabel': '注册即得 Key，几分钟内跑通第一个请求。',
 
@@ -411,6 +429,16 @@ const ja: Dict = {
     '既存のSDKのベースURLを差し替えるだけ。クライアントの書き換えは不要です。',
   'integration.copy': 'コピー',
   'integration.copied': 'コピーしました',
+
+  'agents.title': 'コーディングエージェント',
+  'agents.subtitle':
+    'Codex、Claude Code、Aider、Cline も同じキーで動きます。設定をコピーして起動するだけです。',
+  'agents.note.codex':
+    '~/.codex/config.toml からプロバイダーを読み込み、Chat Completions で接続します。',
+  'agents.note.claude':
+    'Anthropic Messages プロトコル。環境変数3つだけで、設定ファイルの編集は不要です。',
+  'agents.note.aider': '環境変数2つで OpenAI プロトコルに接続し、モデルはコマンドラインで指定します。',
+  'agents.note.cline': 'VS Code 拡張機能で OpenAI Compatible を選び、この4項目を入力します。',
 
   'cta.defaultLabel': 'APIキーを取得',
   'cta.defaultSublabel': '登録後すぐにキーを発行。数分で最初の呼び出しまで。',
@@ -557,6 +585,16 @@ const ko: Dict = {
     '기존 SDK의 Base URL만 변경하면 됩니다. 클라이언트 수정이나 새로운 추상화가 필요 없습니다.',
   'integration.copy': '복사',
   'integration.copied': '복사됨',
+
+  'agents.title': '코딩 에이전트',
+  'agents.subtitle':
+    'Codex, Claude Code, Aider, Cline도 같은 키로 동작합니다. 설정을 복사해 바로 실행하세요.',
+  'agents.note.codex':
+    '~/.codex/config.toml에서 프로바이더를 읽고 Chat Completions로 연결합니다.',
+  'agents.note.claude':
+    'Anthropic Messages 프로토콜. 환경 변수 3개면 되고 설정 파일은 건드리지 않습니다.',
+  'agents.note.aider': '환경 변수 2개로 OpenAI 프로토콜에 연결하고 모델은 명령줄에서 지정합니다.',
+  'agents.note.cline': 'VS Code 확장에서 OpenAI Compatible을 선택하고 네 항목만 채우면 됩니다.',
 
   'cta.defaultLabel': 'API 키 받기',
   'cta.defaultSublabel': '가입 즉시 키가 발급되며 몇 분 안에 첫 호출이 가능합니다.',
