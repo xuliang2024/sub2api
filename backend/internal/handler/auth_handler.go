@@ -27,9 +27,24 @@ type AuthHandler struct {
 	redeemService        *service.RedeemService
 	totpService          *service.TotpService
 	userAttributeService *service.UserAttributeService
+	// partnerService 用于在登录响应、/auth/me 中带上 is_partner（前端据此显示合伙人中心入口）。
+	partnerService *service.PartnerService
 
 	dingTalkClientInstance *DingTalkClient
 	dingTalkClientMu       sync.Mutex
+}
+
+// SetPartnerService 注入合伙人服务；未注入时 is_partner 恒为 false（不影响登录主流程）。
+func (h *AuthHandler) SetPartnerService(partnerService *service.PartnerService) {
+	h.partnerService = partnerService
+}
+
+// isPartner 判断该用户是否为合伙人，失败一律按非合伙人处理。
+func (h *AuthHandler) isPartner(ctx context.Context, userID int64) bool {
+	if h == nil || h.partnerService == nil {
+		return false
+	}
+	return h.partnerService.IsPartner(ctx, userID)
 }
 
 // NewAuthHandler creates a new AuthHandler
@@ -113,14 +128,19 @@ func ensureLoginUserActive(user *service.User) error {
 // respondWithTokenPair 生成 Token 对并返回认证响应
 // 如果 Token 对生成失败，回退到只返回 Access Token（向后兼容）
 func (h *AuthHandler) respondWithTokenPair(c *gin.Context, user *service.User) {
-	respondWithTokenPair(c, h.authService, user)
+	respondWithTokenPair(c, h.authService, user, h.isPartner(c.Request.Context(), user.ID))
 }
 
-func respondWithTokenPair(c *gin.Context, authService *service.AuthService, user *service.User) {
+// respondWithTokenPair 生成 Token 对并返回认证响应；isPartner 随 user 下发，
+// 前端登录后会立即用它决定是否显示「合伙人中心」入口。
+func respondWithTokenPair(c *gin.Context, authService *service.AuthService, user *service.User, isPartner bool) {
 	if err := ensureLoginUserActive(user); err != nil {
 		response.ErrorFrom(c, err)
 		return
 	}
+
+	authUser := dto.UserFromService(user)
+	authUser.IsPartner = isPartner
 
 	tokenPair, err := authService.GenerateTokenPair(c.Request.Context(), user, "")
 	if err != nil {
@@ -134,7 +154,7 @@ func respondWithTokenPair(c *gin.Context, authService *service.AuthService, user
 		response.Success(c, AuthResponse{
 			AccessToken: token,
 			TokenType:   "Bearer",
-			User:        dto.UserFromService(user),
+			User:        authUser,
 		})
 		return
 	}
@@ -143,7 +163,7 @@ func respondWithTokenPair(c *gin.Context, authService *service.AuthService, user
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresIn:    tokenPair.ExpiresIn,
 		TokenType:    "Bearer",
-		User:         dto.UserFromService(user),
+		User:         authUser,
 	})
 }
 
@@ -460,8 +480,13 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 		runMode = h.cfg.RunMode
 	}
 
+	// 前端 refreshUser() 走的就是这个接口，is_partner 必须在这里下发，
+	// 否则合伙人中心菜单与「调整下级倍率」入口永远不会出现。
+	profile := userProfileResponseFromService(user, identities)
+	profile.IsPartner = h.isPartner(c.Request.Context(), user.ID)
+
 	response.Success(c, UserResponse{
-		userProfileResponse: userProfileResponseFromService(user, identities),
+		userProfileResponse: profile,
 		RunMode:             runMode,
 	})
 }

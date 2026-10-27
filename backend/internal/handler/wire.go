@@ -129,6 +129,36 @@ func ProvideUserHandler(
 	return h
 }
 
+// ProvideAuthHandler 构造 AuthHandler 并注入合伙人服务：
+// 登录响应（含 OAuth）与 /auth/me 都要带 is_partner，前端据此显示合伙人入口。
+func ProvideAuthHandler(
+	cfg *config.Config,
+	authService *service.AuthService,
+	userService *service.UserService,
+	settingService *service.SettingService,
+	promoService *service.PromoService,
+	redeemService *service.RedeemService,
+	totpService *service.TotpService,
+	userAttributeService *service.UserAttributeService,
+	partnerService *service.PartnerService,
+) *AuthHandler {
+	h := NewAuthHandler(cfg, authService, userService, settingService, promoService, redeemService, totpService, userAttributeService)
+	h.SetPartnerService(partnerService)
+	return h
+}
+
+// ProvidePasskeyHandler 构造 PasskeyHandler 并注入合伙人服务（登录响应带 is_partner）。
+func ProvidePasskeyHandler(
+	passkeys *service.PasskeyService,
+	authService *service.AuthService,
+	settingService *service.SettingService,
+	partnerService *service.PartnerService,
+) *PasskeyHandler {
+	h := NewPasskeyHandler(passkeys, authService, settingService)
+	h.SetPartnerService(partnerService)
+	return h
+}
+
 func ProvideGatewayHandler(
 	gatewayService *service.GatewayService,
 	openAIGatewayService *service.OpenAIGatewayService,
@@ -271,7 +301,7 @@ func ProvideHandlers(
 // ProviderSet is the Wire provider set for all handlers
 var ProviderSet = wire.NewSet(
 	// Top-level handlers
-	NewAuthHandler,
+	ProvideAuthHandler,
 	NewAPIKeyHandler,
 	NewUsageHandler,
 	NewRedeemHandler,
@@ -282,7 +312,7 @@ var ProviderSet = wire.NewSet(
 	ProvideGatewayHandler,
 	ProvideOpenAIGatewayHandler,
 	NewTotpHandler,
-	NewPasskeyHandler,
+	ProvidePasskeyHandler,
 	ProvideSettingHandler,
 	NewPaymentHandler,
 	NewPaymentWebhookHandler,

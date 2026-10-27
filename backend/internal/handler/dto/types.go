@@ -36,6 +36,10 @@ type User struct {
 
 	APIKeys       []APIKey           `json:"api_keys,omitempty"`
 	Subscriptions []UserSubscription `json:"subscriptions,omitempty"`
+
+	// IsPartner 标记该用户是否合伙人。管理端用户列表用它打标；
+	// 登录响应与 /auth/me 也返回，前端据此显示「合伙人中心」入口。
+	IsPartner bool `json:"is_partner"`
 }
 
 // AdminUser 是管理员接口使用的 user DTO（包含敏感/内部字段）。
@@ -51,8 +55,6 @@ type AdminUser struct {
 	// RestrictPublicGroups 为 true 时，该用户仅可使用 allowed_groups 中列出的
 	// 公开分组。这是管理侧的权限开关，不下发给用户自身的接口。
 	RestrictPublicGroups bool `json:"restrict_public_groups"`
-	// IsPartner 标记该用户是否合伙人（用于管理端用户列表打标）。
-	IsPartner bool `json:"is_partner"`
 }
 
 type APIKey struct {

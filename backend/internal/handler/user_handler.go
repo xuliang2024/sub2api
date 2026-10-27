@@ -105,7 +105,6 @@ type userProfileResponse struct {
 	OIDCBound         bool                                   `json:"oidc_bound"`
 	WeChatBound       bool                                   `json:"wechat_bound"`
 	DingTalkBound     bool                                   `json:"dingtalk_bound"`
-	IsPartner         bool                                   `json:"is_partner"`
 }
 
 type userProfileSourceContext struct {

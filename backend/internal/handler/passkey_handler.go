@@ -21,6 +21,13 @@ type PasskeyHandler struct {
 	passkeys    *service.PasskeyService
 	authService *service.AuthService
 	settingSvc  *service.SettingService
+	// partnerService 用于登录响应带上 is_partner（与密码登录保持一致）。
+	partnerService *service.PartnerService
+}
+
+// SetPartnerService 注入合伙人服务；未注入时 is_partner 恒为 false。
+func (h *PasskeyHandler) SetPartnerService(partnerService *service.PartnerService) {
+	h.partnerService = partnerService
 }
 
 func NewPasskeyHandler(
@@ -121,7 +128,11 @@ func (h *PasskeyHandler) FinishLogin(c *gin.Context) {
 	middleware2.SetAuditActor(c, user.ID, user.Email)
 	c.Set("auth_method", service.AuditAuthMethodPasskey)
 	h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
-	respondWithTokenPair(c, h.authService, user)
+	isPartner := false
+	if h.partnerService != nil {
+		isPartner = h.partnerService.IsPartner(c.Request.Context(), user.ID)
+	}
+	respondWithTokenPair(c, h.authService, user, isPartner)
 }
 
 func (h *PasskeyHandler) BeginRegistration(c *gin.Context) {
