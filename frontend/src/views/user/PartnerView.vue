@@ -101,28 +101,41 @@
                   <div v-if="user.rates.length === 0" class="py-4 text-center text-sm text-gray-500 dark:text-dark-400">{{ t('partner.users.noGroups') }}</div>
                   <div v-else class="space-y-3">
                     <div v-for="rate in user.rates" :key="rate.group_id" class="rounded-lg border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-900">
-                      <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-                        <div class="min-w-0 flex-1">
+                      <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
+                        <div class="min-w-0 lg:w-56">
                           <label class="text-sm font-medium text-gray-900 dark:text-white">{{ rate.group_name }}</label>
-                          <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ t('partner.users.defaultRate', { rate: rate.default_rate }) }}</p>
+                          <p class="mt-1 text-xs text-gray-500 dark:text-dark-400">{{ t('partner.users.defaultRate', { rate: formatRate(rate.default_rate) }) }}</p>
                         </div>
-                        <div class="w-full lg:w-36">
-                          <input
-                            v-model="rateInputs[user.user_id][rate.group_id]"
-                            type="number"
-                            :min="overview.min_rate_multiplier"
-                            max="1"
-                            step="0.01"
-                            class="input"
-                            :placeholder="t('partner.users.followDefault')"
-                            :aria-label="t('partner.users.rateForGroup', { group: rate.group_name })"
-                          />
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-3">
+                            <input
+                              type="range"
+                              class="partner-rate-slider min-w-0 flex-1"
+                              :min="minRate"
+                              :max="1"
+                              :step="rateStep"
+                              :value="rateValue(user.user_id, rate)"
+                              :aria-label="t('partner.users.rateForGroup', { group: rate.group_name })"
+                              @input="onRateInput(user.user_id, rate.group_id, $event)"
+                            />
+                            <span class="w-20 shrink-0 text-right text-sm font-semibold tabular-nums text-gray-900 dark:text-white">
+                              ×{{ formatRate(rateValue(user.user_id, rate)) }}
+                            </span>
+                          </div>
+                          <div class="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-xs text-gray-500 dark:text-dark-400">{{ t('partner.users.rateRange', { min: formatRate(minRate) }) }}</span>
+                            <button
+                              type="button"
+                              class="text-xs font-medium text-primary-600 hover:underline disabled:cursor-default disabled:text-gray-400 disabled:no-underline dark:text-primary-400 dark:disabled:text-dark-500"
+                              :disabled="!isRateOverridden(user.user_id, rate.group_id)"
+                              @click="resetRate(user.user_id, rate)"
+                            >
+                              {{ isRateOverridden(user.user_id, rate.group_id) ? t('partner.users.resetToDefault') : t('partner.users.followingDefault') }}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      <p class="mt-3 text-xs text-gray-500 dark:text-dark-400">
-                        {{ t('partner.users.rateRange', { min: overview.min_rate_multiplier }) }}
-                      </p>
-                      <p class="mt-1 text-xs text-primary-600 dark:text-primary-400">
+                      <p class="mt-3 text-xs text-primary-600 dark:text-primary-400">
                         {{ t('partner.users.simulation', simulationFor(user.user_id, rate)) }}
                       </p>
                     </div>
@@ -239,7 +252,13 @@ const downlines = ref<PartnerDownline[]>([])
 const usersLoading = ref(false)
 const expandedUserId = ref<number | null>(null)
 const savingUserId = ref<number | null>(null)
-const rateInputs = reactive<Record<number, Record<number, string>>>({})
+// 倍率编辑改成滑块后统一用数字存储：rateDraft 是滑块当前值，
+// rateTouched 标记是否被拖动过。只有拖动过的分组才提交，未拖动 = 跟随分组默认。
+const rateDraft = reactive<Record<number, Record<number, number>>>({})
+const rateTouched = reactive<Record<number, Record<number, boolean>>>({})
+
+const minRate = computed(() => overview.value?.min_rate_multiplier ?? 0)
+const rateStep = 0.0001
 
 const commissions = ref<PartnerCommission[]>([])
 const commissionLoading = ref(false)
@@ -279,9 +298,11 @@ async function loadUsers() {
     const res = await partnerAPI.listUsers()
     downlines.value = res.items || []
     for (const user of downlines.value) {
-      rateInputs[user.user_id] = {}
+      rateDraft[user.user_id] = {}
+      rateTouched[user.user_id] = {}
       for (const rate of user.rates) {
-        rateInputs[user.user_id][rate.group_id] = rate.rate_multiplier == null ? '' : String(rate.rate_multiplier)
+        rateDraft[user.user_id][rate.group_id] = rate.rate_multiplier ?? rate.default_rate
+        rateTouched[user.user_id][rate.group_id] = rate.rate_multiplier != null
       }
     }
   } catch (error) {
@@ -318,28 +339,57 @@ function toggleUser(userId: number) {
 function boundSourceLabel(source: PartnerBoundSource): string {
   return t(`partner.users.sources.${source}`)
 }
-function effectiveRate(userId: number, rate: PartnerUserGroupRate): number {
-  const raw = rateInputs[userId]?.[rate.group_id]?.trim()
-  if (!raw) return rate.default_rate
-  const parsed = Number(raw)
-  return Number.isFinite(parsed) ? parsed : rate.default_rate
+// formatRate 把倍率格式化成最多 4 位小数且去掉多余的 0（如 0.5001、1）。
+function formatRate(value: number): string {
+  if (!Number.isFinite(value)) return '-'
+  return String(Number(value.toFixed(4)))
+}
+// clampRate 把任意输入收敛到 [minRate, 1]，避免滑块出现越界值。
+function clampRate(value: number): number {
+  const min = minRate.value
+  if (!Number.isFinite(value)) return min
+  return Math.min(1, Math.max(min, value))
+}
+// rateValue 是渲染与保存共用的唯一取值口径，保证永远返回合法数字。
+function rateValue(userId: number, rate: PartnerUserGroupRate): number {
+  const draft = rateDraft[userId]?.[rate.group_id]
+  const raw = typeof draft === 'number' && Number.isFinite(draft) ? draft : rate.default_rate
+  return clampRate(raw)
+}
+function isRateOverridden(userId: number, groupId: number): boolean {
+  return rateTouched[userId]?.[groupId] === true
+}
+function onRateInput(userId: number, groupId: number, event: Event): void {
+  const target = event.target as HTMLInputElement | null
+  const parsed = Number(target?.value ?? '')
+  if (!rateDraft[userId]) rateDraft[userId] = {}
+  if (!rateTouched[userId]) rateTouched[userId] = {}
+  rateDraft[userId][groupId] = clampRate(parsed)
+  rateTouched[userId][groupId] = true
+}
+// resetRate 恢复成「跟随分组默认」，保存时该分组不会被提交。
+function resetRate(userId: number, rate: PartnerUserGroupRate): void {
+  if (!rateDraft[userId]) rateDraft[userId] = {}
+  if (!rateTouched[userId]) rateTouched[userId] = {}
+  rateDraft[userId][rate.group_id] = rate.default_rate
+  rateTouched[userId][rate.group_id] = false
 }
 function simulationFor(userId: number, rate: PartnerUserGroupRate) {
-  const min = overview.value?.min_rate_multiplier ?? 0
-  const effective = effectiveRate(userId, rate)
+  const min = minRate.value
+  const effective = rateValue(userId, rate)
   const commission = Math.max(0, effective - min)
-  return { userPay: effective.toFixed(2), commission: commission.toFixed(2), min: String(min) }
+  return { userPay: effective.toFixed(2), commission: commission.toFixed(2), min: formatRate(min) }
 }
 async function saveRates(user: PartnerDownline) {
   if (!overview.value) return
-  const min = overview.value.min_rate_multiplier
+  const min = minRate.value
   const rates: Array<{ group_id: number; rate_multiplier: number }> = []
   for (const rate of user.rates) {
-    const raw = rateInputs[user.user_id]?.[rate.group_id]?.trim() ?? ''
-    if (!raw) continue
-    const value = Number(raw)
+    // 未拖动的分组保持「跟随默认」，不提交。
+    if (!isRateOverridden(user.user_id, rate.group_id)) continue
+    const value = rateValue(user.user_id, rate)
     if (!Number.isFinite(value) || value < min || value > 1) {
-      appStore.showError(t('partner.users.invalidRate', { group: rate.group_name, min }))
+      appStore.showError(t('partner.users.invalidRate', { group: rate.group_name, min: formatRate(min) }))
       return
     }
     rates.push({ group_id: rate.group_id, rate_multiplier: value })
@@ -391,3 +441,45 @@ onMounted(() => {
   void loadOverview()
 })
 </script>
+
+<style scoped>
+/* 倍率滑块：统一 thumb 尺寸，并跟随主题的 primary 色 */
+.partner-rate-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgb(229 231 235);
+  outline: none;
+  cursor: pointer;
+}
+.dark .partner-rate-slider {
+  background: rgb(55 65 81);
+}
+.partner-rate-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: rgb(37 99 235);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  cursor: grab;
+}
+.partner-rate-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+}
+.partner-rate-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: rgb(37 99 235);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+  cursor: grab;
+}
+.partner-rate-slider:focus-visible {
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.25);
+}
+</style>
