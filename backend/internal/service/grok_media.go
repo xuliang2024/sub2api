@@ -1378,15 +1378,23 @@ func grokMediaErrorType(statusCode int) string {
 }
 
 func writeGrokMediaErrorResponse(c *gin.Context, statusCode int, errType, message string) {
+	writeGrokMediaErrorResponseWithCode(c, statusCode, errType, "", message)
+}
+
+// writeGrokMediaErrorResponseWithCode 与 writeGrokMediaErrorResponse 一致，
+// 额外支持可选的上游业务错误码；code 为空时省略该字段。
+func writeGrokMediaErrorResponseWithCode(c *gin.Context, statusCode int, errType, code, message string) {
 	if c == nil || c.Writer == nil || c.Writer.Written() {
 		return
 	}
-	c.JSON(statusCode, gin.H{
-		"error": gin.H{
-			"type":    strings.TrimSpace(errType),
-			"message": strings.TrimSpace(message),
-		},
-	})
+	payload := gin.H{
+		"type":    strings.TrimSpace(errType),
+		"message": strings.TrimSpace(message),
+	}
+	if trimmed := strings.TrimSpace(code); trimmed != "" {
+		payload["code"] = trimmed
+	}
+	c.JSON(statusCode, gin.H{"error": payload})
 }
 
 func writeGrokMediaResponse(c *gin.Context, resp *http.Response, body []byte, filter *responseheaders.CompiledHeaderFilter) {
