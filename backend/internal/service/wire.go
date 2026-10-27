@@ -855,6 +855,104 @@ func ProvideAPIKeyService(
 	return svc
 }
 
+// ProvidePartnerUsageResolver 提供计费路径共用的合伙人快照解析器（进程内缓存）。
+func ProvidePartnerUsageResolver(repo PartnerRepository) *PartnerUsageResolver {
+	return NewPartnerUsageResolver(repo, 0)
+}
+
+// ProvideGatewayService 构造 GatewayService 并注入合伙人收益快照解析器。
+func ProvideGatewayService(
+	accountRepo AccountRepository,
+	groupRepo GroupRepository,
+	usageLogRepo UsageLogRepository,
+	usageBillingRepo UsageBillingRepository,
+	userRepo UserRepository,
+	userSubRepo UserSubscriptionRepository,
+	userGroupRateRepo UserGroupRateRepository,
+	cache GatewayCache,
+	cfg *config.Config,
+	schedulerSnapshot *SchedulerSnapshotService,
+	concurrencyService *ConcurrencyService,
+	billingService *BillingService,
+	rateLimitService *RateLimitService,
+	billingCacheService *BillingCacheService,
+	identityService *IdentityService,
+	httpUpstream HTTPUpstream,
+	deferredService *DeferredService,
+	claudeTokenProvider *ClaudeTokenProvider,
+	sessionLimitCache SessionLimitCache,
+	rpmCache RPMCache,
+	digestStore *DigestSessionStore,
+	settingService *SettingService,
+	tlsFPProfileService *TLSFingerprintProfileService,
+	channelService *ChannelService,
+	resolver *ModelPricingResolver,
+	compositeResolver *CompositeRouteResolver,
+	balanceNotifyService *BalanceNotifyService,
+	userPlatformQuotaRepo UserPlatformQuotaRepository,
+	partnerUsageResolver *PartnerUsageResolver,
+) *GatewayService {
+	svc := NewGatewayService(
+		accountRepo, groupRepo, usageLogRepo, usageBillingRepo, userRepo, userSubRepo,
+		userGroupRateRepo, cache, cfg, schedulerSnapshot, concurrencyService, billingService,
+		rateLimitService, billingCacheService, identityService, httpUpstream, deferredService,
+		claudeTokenProvider, sessionLimitCache, rpmCache, digestStore, settingService,
+		tlsFPProfileService, channelService, resolver, compositeResolver, balanceNotifyService,
+		userPlatformQuotaRepo,
+	)
+	svc.SetPartnerUsageResolver(partnerUsageResolver)
+	return svc
+}
+
+// ProvideOpenAIGatewayService 构造 OpenAIGatewayService 并注入合伙人收益快照解析器。
+func ProvideOpenAIGatewayService(
+	accountRepo AccountRepository,
+	usageLogRepo UsageLogRepository,
+	usageBillingRepo UsageBillingRepository,
+	userRepo UserRepository,
+	userSubRepo UserSubscriptionRepository,
+	userGroupRateRepo UserGroupRateRepository,
+	cache GatewayCache,
+	cfg *config.Config,
+	schedulerSnapshot *SchedulerSnapshotService,
+	concurrencyService *ConcurrencyService,
+	billingService *BillingService,
+	rateLimitService *RateLimitService,
+	billingCacheService *BillingCacheService,
+	httpUpstream HTTPUpstream,
+	deferredService *DeferredService,
+	openAITokenProvider *OpenAITokenProvider,
+	grokTokenProvider *GrokTokenProvider,
+	resolver *ModelPricingResolver,
+	channelService *ChannelService,
+	balanceNotifyService *BalanceNotifyService,
+	settingService *SettingService,
+	userPlatformQuotaRepo UserPlatformQuotaRepository,
+	partnerUsageResolver *PartnerUsageResolver,
+) *OpenAIGatewayService {
+	svc := NewOpenAIGatewayService(
+		accountRepo, usageLogRepo, usageBillingRepo, userRepo, userSubRepo, userGroupRateRepo,
+		cache, cfg, schedulerSnapshot, concurrencyService, billingService, rateLimitService,
+		billingCacheService, httpUpstream, deferredService, openAITokenProvider, grokTokenProvider,
+		resolver, channelService, balanceNotifyService, settingService, userPlatformQuotaRepo,
+	)
+	svc.SetPartnerUsageResolver(partnerUsageResolver)
+	return svc
+}
+
+// ProvideAffiliateService 构造 AffiliateService 并注入合伙人邀请绑定器。
+func ProvideAffiliateService(
+	repo AffiliateRepository,
+	settingService *SettingService,
+	authCacheInvalidator APIKeyAuthCacheInvalidator,
+	billingCacheService *BillingCacheService,
+	partnerService *PartnerService,
+) *AffiliateService {
+	svc := NewAffiliateService(repo, settingService, authCacheInvalidator, billingCacheService)
+	svc.SetPartnerBinder(partnerService)
+	return svc
+}
+
 // ProviderSet is the Wire provider set for all services
 var ProviderSet = wire.NewSet(
 	// Core services
@@ -877,8 +975,11 @@ var ProviderSet = wire.NewSet(
 	ProvideBillingCacheService,
 	NewAnnouncementService,
 	NewAdminService,
-	NewGatewayService,
-	NewOpenAIGatewayService,
+	ProvideGatewayService,
+	ProvideOpenAIGatewayService,
+	NewPartnerService,
+	ProvidePartnerUsageResolver,
+	wire.Bind(new(PartnerGroupLister), new(*APIKeyService)),
 	ProvideImageStorageSettingService,
 	ProvideImageTaskService,
 	ProvideBatchImageModelPricingResolver,
@@ -977,7 +1078,7 @@ var ProviderSet = wire.NewSet(
 	NewModelPlazaService,
 	NewCampaignService,
 	NewContentModerationService,
-	NewAffiliateService,
+	ProvideAffiliateService,
 	ProvidePaymentConfigService,
 	ProvidePaymentService,
 	ProvidePaymentOrderExpiryService,

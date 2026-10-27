@@ -177,7 +177,7 @@ func (r *userGroupRateRepository) SyncUserGroupRates(ctx context.Context, userID
 	if len(rates) == 0 {
 		if _, err := r.sql.ExecContext(ctx, `
 			UPDATE user_group_rate_multipliers
-			SET rate_multiplier = NULL, updated_at = NOW()
+			SET rate_multiplier = NULL, set_by = 'admin', updated_at = NOW()
 			WHERE user_id = $1
 		`, userID); err != nil {
 			return err
@@ -203,7 +203,7 @@ func (r *userGroupRateRepository) SyncUserGroupRates(ctx context.Context, userID
 	if len(clearGroupIDs) > 0 {
 		if _, err := r.sql.ExecContext(ctx, `
 			UPDATE user_group_rate_multipliers
-			SET rate_multiplier = NULL, updated_at = NOW()
+			SET rate_multiplier = NULL, set_by = 'admin', updated_at = NOW()
 			WHERE user_id = $1 AND group_id = ANY($2)
 		`, userID, pq.Array(clearGroupIDs)); err != nil {
 			return err
@@ -218,17 +218,19 @@ func (r *userGroupRateRepository) SyncUserGroupRates(ctx context.Context, userID
 	if len(upsertGroupIDs) > 0 {
 		now := time.Now()
 		_, err := r.sql.ExecContext(ctx, `
-			INSERT INTO user_group_rate_multipliers (user_id, group_id, rate_multiplier, created_at, updated_at)
+			INSERT INTO user_group_rate_multipliers (user_id, group_id, rate_multiplier, set_by, created_at, updated_at)
 			SELECT
 				$1::bigint,
 				data.group_id,
 				data.rate_multiplier,
+				'admin',
 				$2::timestamptz,
 				$2::timestamptz
 			FROM unnest($3::bigint[], $4::double precision[]) AS data(group_id, rate_multiplier)
 			ON CONFLICT (user_id, group_id)
 			DO UPDATE SET
 				rate_multiplier = EXCLUDED.rate_multiplier,
+				set_by = 'admin',
 				updated_at = EXCLUDED.updated_at
 		`, userID, now, pq.Array(upsertGroupIDs), pq.Array(upsertRates))
 		if err != nil {
@@ -253,7 +255,7 @@ func (r *userGroupRateRepository) SyncGroupRateMultipliers(ctx context.Context, 
 	if len(keepUserIDs) == 0 {
 		if _, err := r.sql.ExecContext(ctx, `
 			UPDATE user_group_rate_multipliers
-			SET rate_multiplier = NULL, updated_at = NOW()
+			SET rate_multiplier = NULL, set_by = 'admin', updated_at = NOW()
 			WHERE group_id = $1
 		`, groupID); err != nil {
 			return err
@@ -261,7 +263,7 @@ func (r *userGroupRateRepository) SyncGroupRateMultipliers(ctx context.Context, 
 	} else {
 		if _, err := r.sql.ExecContext(ctx, `
 			UPDATE user_group_rate_multipliers
-			SET rate_multiplier = NULL, updated_at = NOW()
+			SET rate_multiplier = NULL, set_by = 'admin', updated_at = NOW()
 			WHERE group_id = $1 AND user_id <> ALL($2)
 		`, groupID, pq.Array(keepUserIDs)); err != nil {
 			return err
@@ -288,11 +290,11 @@ func (r *userGroupRateRepository) SyncGroupRateMultipliers(ctx context.Context, 
 	}
 	now := time.Now()
 	_, err := r.sql.ExecContext(ctx, `
-		INSERT INTO user_group_rate_multipliers (user_id, group_id, rate_multiplier, created_at, updated_at)
-		SELECT data.user_id, $1::bigint, data.rate_multiplier, $2::timestamptz, $2::timestamptz
+		INSERT INTO user_group_rate_multipliers (user_id, group_id, rate_multiplier, set_by, created_at, updated_at)
+		SELECT data.user_id, $1::bigint, data.rate_multiplier, 'admin', $2::timestamptz, $2::timestamptz
 		FROM unnest($3::bigint[], $4::double precision[]) AS data(user_id, rate_multiplier)
 		ON CONFLICT (user_id, group_id)
-		DO UPDATE SET rate_multiplier = EXCLUDED.rate_multiplier, updated_at = EXCLUDED.updated_at
+		DO UPDATE SET rate_multiplier = EXCLUDED.rate_multiplier, set_by = 'admin', updated_at = EXCLUDED.updated_at
 	`, groupID, now, pq.Array(userIDs), pq.Array(rates))
 	return err
 }

@@ -51,6 +51,8 @@ type AdminUser struct {
 	// RestrictPublicGroups 为 true 时，该用户仅可使用 allowed_groups 中列出的
 	// 公开分组。这是管理侧的权限开关，不下发给用户自身的接口。
 	RestrictPublicGroups bool `json:"restrict_public_groups"`
+	// IsPartner 标记该用户是否合伙人（用于管理端用户列表打标）。
+	IsPartner bool `json:"is_partner"`
 }
 
 type APIKey struct {

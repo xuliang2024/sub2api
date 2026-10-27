@@ -500,6 +500,15 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 		return nil
 	}
 
+	// 合伙人收益快照：仅余额按量 + 实际按用户级基础倍率计费的消费；
+	// simple mode（只记录不扣费）在上面已提前返回，不计收益。
+	if !isSubscriptionBilling && user != nil && apiKey.GroupID != nil && apiKey.Group != nil &&
+		!partnerIndependentMediaBilling(result.ImageCount, result.VideoCount, apiKey.Group) {
+		if share := s.partnerUsageResolver.Resolve(ctx, user.ID, *apiKey.GroupID); share != nil {
+			ApplyPartnerCommission(usageLog, share, usageLog.TotalCost)
+		}
+	}
+
 	// Async usage billing runs outside the original request context, so it
 	// cannot recover ForcePlatform there. Fall back for internal/test callers.
 	quotaPlatform := input.QuotaPlatform

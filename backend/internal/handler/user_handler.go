@@ -22,6 +22,12 @@ type UserHandler struct {
 	emailCache            service.EmailCache
 	affiliateService      *service.AffiliateService
 	userPlatformQuotaRepo service.UserPlatformQuotaRepository
+	partnerService        *service.PartnerService
+}
+
+// SetPartnerService 注入合伙人服务（可选）。
+func (h *UserHandler) SetPartnerService(s *service.PartnerService) {
+	h.partnerService = s
 }
 
 // NewUserHandler creates a new UserHandler
@@ -99,6 +105,7 @@ type userProfileResponse struct {
 	OIDCBound         bool                                   `json:"oidc_bound"`
 	WeChatBound       bool                                   `json:"wechat_bound"`
 	DingTalkBound     bool                                   `json:"dingtalk_bound"`
+	IsPartner         bool                                   `json:"is_partner"`
 }
 
 type userProfileSourceContext struct {
@@ -125,6 +132,9 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
+	}
+	if h.partnerService != nil {
+		profileResp.IsPartner = h.partnerService.IsPartner(c.Request.Context(), subject.UserID)
 	}
 
 	response.Success(c, profileResp)

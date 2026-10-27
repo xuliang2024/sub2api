@@ -809,6 +809,12 @@ type GatewayService struct {
 	tlsFPProfileService   *TLSFingerprintProfileService
 	balanceNotifyService  *BalanceNotifyService
 	userPlatformQuotaRepo UserPlatformQuotaRepository
+	partnerUsageResolver  *PartnerUsageResolver
+}
+
+// SetPartnerUsageResolver 注入合伙人收益快照解析器（可选，nil 时不计收益）。
+func (s *GatewayService) SetPartnerUsageResolver(r *PartnerUsageResolver) {
+	s.partnerUsageResolver = r
 }
 
 // NewGatewayService creates a new GatewayService

@@ -290,7 +290,7 @@
           @sort="handleSort"
           @update:selected-keys="handleSelectedKeysUpdate"
         >
-          <template #cell-email="{ value }">
+          <template #cell-email="{ value, row }">
             <div class="flex items-center gap-2">
               <div
                 class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30"
@@ -300,6 +300,7 @@
                 </span>
               </div>
               <span class="font-medium text-gray-900 dark:text-white">{{ value }}</span>
+              <span v-if="row.is_partner" class="badge badge-primary shrink-0">{{ t('admin.partners.badge') }}</span>
             </div>
           </template>
 

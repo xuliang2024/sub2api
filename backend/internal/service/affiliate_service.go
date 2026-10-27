@@ -233,6 +233,17 @@ type AffiliateService struct {
 	settingService       *SettingService
 	authCacheInvalidator APIKeyAuthCacheInvalidator
 	billingCacheService  *BillingCacheService
+	partnerBinder        PartnerInviteBinder
+}
+
+// PartnerInviteBinder 邀请注册成功后自动建立合伙人绑定（由 PartnerService 实现）。
+type PartnerInviteBinder interface {
+	BindByInviter(ctx context.Context, inviterUserID, newUserID int64) error
+}
+
+// SetPartnerBinder 注入合伙人绑定器（可选）。
+func (s *AffiliateService) SetPartnerBinder(binder PartnerInviteBinder) {
+	s.partnerBinder = binder
 }
 
 func NewAffiliateService(repo AffiliateRepository, settingService *SettingService, authCacheInvalidator APIKeyAuthCacheInvalidator, billingCacheService *BillingCacheService) *AffiliateService {
@@ -331,6 +342,13 @@ func (s *AffiliateService) BindInviterByCode(ctx context.Context, userID int64, 
 	}
 	if !bound {
 		return ErrAffiliateAlreadyBound
+	}
+	// 合伙人制度：inviter 是 active 合伙人时自动建立下线绑定。
+	// 普通注册与 OAuth 补绑都经过此函数，天然统一挂点；失败不阻断注册。
+	if s.partnerBinder != nil {
+		if err := s.partnerBinder.BindByInviter(ctx, inviterSummary.UserID, userID); err != nil {
+			logger.LegacyPrintf("service.affiliate", "bind partner by inviter failed: inviter=%d user=%d err=%v", inviterSummary.UserID, userID, err)
+		}
 	}
 	return nil
 }

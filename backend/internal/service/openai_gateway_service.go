@@ -471,6 +471,7 @@ type OpenAIGatewayService struct {
 	balanceNotifyService  *BalanceNotifyService
 	settingService        *SettingService
 	userPlatformQuotaRepo UserPlatformQuotaRepository
+	partnerUsageResolver  *PartnerUsageResolver
 	liveAttestation       liveattestation.Provider
 	liveAttestationCipher SecretEncryptor
 
@@ -511,6 +512,11 @@ type OpenAIGatewayService struct {
 	// 剥离跨账号回带（openai_codex_turn_state.go）。
 	openaiCodexTurnStateOrigins sync.Map
 	openaiCodexTurnStateWrites  atomic.Uint64
+}
+
+// SetPartnerUsageResolver 注入合伙人收益快照解析器（可选，nil 时不计收益）。
+func (s *OpenAIGatewayService) SetPartnerUsageResolver(r *PartnerUsageResolver) {
+	s.partnerUsageResolver = r
 }
 
 // NewOpenAIGatewayService creates a new OpenAIGatewayService

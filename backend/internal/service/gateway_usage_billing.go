@@ -879,6 +879,14 @@ func (s *GatewayService) recordUsageCore(ctx context.Context, input *recordUsage
 			quotaPlatform = account.Platform
 		}
 	}
+	// 合伙人收益快照：仅余额按量 + 实际按用户级基础倍率计费的消费；
+	// simple mode（只记录不扣费）在上面已提前返回，不计收益。
+	if !isSubscriptionBilling && user != nil && apiKey.GroupID != nil && apiKey.Group != nil &&
+		!partnerIndependentMediaBilling(result.ImageCount, 0, apiKey.Group) {
+		if share := s.partnerUsageResolver.Resolve(ctx, user.ID, *apiKey.GroupID); share != nil {
+			ApplyPartnerCommission(usageLog, share, usageLog.TotalCost)
+		}
+	}
 	requestID := usageLog.RequestID
 	_, billingErr := applyUsageBilling(ctx, requestID, usageLog, &postUsageBillingParams{
 		Cost:                       cost,

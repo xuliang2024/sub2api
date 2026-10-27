@@ -208,6 +208,13 @@ type UsageLog struct {
 	VideoResolution      *string
 	VideoDurationSeconds *int
 
+	// 合伙人收益快照：命中合伙人定价的余额按量消费记录 partner_id；
+	// PartnerCommission 可为 0（下线消费统计仍需 partner_id）。
+	PartnerID         *int64
+	PartnerCommission float64
+	PartnerBaseRate   *float64
+	PartnerRateFloor  *float64
+
 	CreatedAt time.Time
 
 	User         *User

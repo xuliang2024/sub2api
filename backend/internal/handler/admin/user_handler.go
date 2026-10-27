@@ -35,6 +35,12 @@ type UserHandler struct {
 	totpService           *service.TotpService                // 角色提升为管理员的 step-up 门控
 	userService           *service.UserService
 	settingService        *service.SettingService // step-up 功能开关
+	partnerService        *service.PartnerService
+}
+
+// SetPartnerService 注入合伙人服务（用户列表 is_partner 打标，可选）。
+func (h *UserHandler) SetPartnerService(s *service.PartnerService) {
+	h.partnerService = s
 }
 
 // NewUserHandler creates a new admin user handler
@@ -186,11 +192,20 @@ func (h *UserHandler) List(c *gin.Context) {
 	}
 
 	// Build response with concurrency info
+	partnerIDs := map[int64]bool{}
+	if h.partnerService != nil && len(users) > 0 {
+		ids := make([]int64, 0, len(users))
+		for i := range users {
+			ids = append(ids, users[i].ID)
+		}
+		partnerIDs, _ = h.partnerService.GetPartnerUserIDs(c.Request.Context(), ids)
+	}
 	out := make([]UserWithConcurrency, len(users))
 	for i := range users {
 		out[i] = UserWithConcurrency{
 			AdminUser: *dto.UserFromServiceAdmin(&users[i]),
 		}
+		out[i].IsPartner = partnerIDs[users[i].ID]
 		if info := loadInfo[users[i].ID]; info != nil {
 			out[i].CurrentConcurrency = info.CurrentConcurrency
 		}

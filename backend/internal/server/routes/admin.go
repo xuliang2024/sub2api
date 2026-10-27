@@ -133,6 +133,9 @@ func RegisterAdminRoutes(
 		// 邀请返利（专属用户管理）
 		registerAffiliateRoutes(admin, h)
 
+		// 合伙人制度管理
+		registerPartnerRoutes(admin, h)
+
 		// 操作审计日志
 		registerAuditLogRoutes(admin, h, stepUpAuth)
 	}
@@ -821,6 +824,21 @@ func registerChannelMonitorRoutes(admin *gin.RouterGroup, h *handler.Handlers, s
 		templates.DELETE("/:id", h.Admin.ChannelMonitorTemplate.Delete)
 		templates.GET("/:id/monitors", h.Admin.ChannelMonitorTemplate.AssociatedMonitors)
 		templates.POST("/:id/apply", h.Admin.ChannelMonitorTemplate.Apply)
+	}
+}
+
+// registerPartnerRoutes 注册合伙人制度的管理端路由。
+func registerPartnerRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	partners := admin.Group("/partners")
+	{
+		partners.GET("", h.Admin.Partner.List)
+		partners.PUT("/:userId", h.Admin.Partner.Upsert)
+		partners.DELETE("/:userId", h.Admin.Partner.Delete)
+		partners.GET("/:userId/relations", h.Admin.Partner.ListRelations)
+		partners.POST("/:userId/relations", h.Admin.Partner.Bind)
+		partners.DELETE("/:userId/relations/:targetUserId", h.Admin.Partner.Unbind)
+		partners.GET("/:userId/settlements", h.Admin.Partner.ListSettlements)
+		partners.POST("/:userId/settlements", h.Admin.Partner.Settle)
 	}
 }
 
