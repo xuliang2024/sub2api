@@ -8,6 +8,8 @@ const groupsAPI = vi.hoisted(() => ({ getUserGroupRates: vi.fn() }))
 vi.mock('@/api/channels', () => ({ default: channelsAPI }))
 vi.mock('@/api/groups', () => ({ default: groupsAPI }))
 vi.mock('@/stores/app', () => ({ useAppStore: () => ({ showError: vi.fn() }) }))
+// 本文件校验折扣体系自身的计算与展示，强制打开开关（线上由 constants/pricingUi 决定）。
+vi.mock('@/constants/pricingUi', () => ({ SHOW_OFFICIAL_DISCOUNT: true }))
 vi.mock('vue-i18n', async (importOriginal) => ({
   ...(await importOriginal<typeof import('vue-i18n')>()),
   useI18n: () => ({ t }),

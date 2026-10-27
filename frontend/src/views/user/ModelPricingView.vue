@@ -41,7 +41,10 @@
         </div>
 
         <div class="flex w-full flex-shrink-0 flex-wrap items-center justify-end gap-3 xl:w-auto">
-          <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-300">
+          <div
+            v-if="SHOW_OFFICIAL_DISCOUNT"
+            class="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-300"
+          >
             <Toggle v-model="onlyDiscounted" />
             <span class="cursor-pointer select-none" @click="onlyDiscounted = !onlyDiscounted">
               {{ t('modelPricing.onlyDiscounted') }}
@@ -64,12 +67,14 @@
         class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-dark-400"
       >
         <span>{{ t('modelPricing.stats.summary', { models: rows.length, offers: totalOffers }) }}</span>
-        <span class="h-3 w-px bg-gray-200 dark:bg-dark-700"></span>
-        <span>
-          {{ t('modelPricing.stats.avgDiscount') }}
-          <span class="font-medium text-gray-700 dark:text-dark-200">{{ avgDiscountText }}</span>
-        </span>
-        <template v-if="aboveOfficialCount > 0">
+        <template v-if="SHOW_OFFICIAL_DISCOUNT">
+          <span class="h-3 w-px bg-gray-200 dark:bg-dark-700"></span>
+          <span>
+            {{ t('modelPricing.stats.avgDiscount') }}
+            <span class="font-medium text-gray-700 dark:text-dark-200">{{ avgDiscountText }}</span>
+          </span>
+        </template>
+        <template v-if="SHOW_OFFICIAL_DISCOUNT && aboveOfficialCount > 0">
           <span class="h-3 w-px bg-gray-200 dark:bg-dark-700"></span>
           <span class="text-amber-600 dark:text-amber-400">
             {{ t('modelPricing.stats.aboveOfficial', { count: aboveOfficialCount }) }}
@@ -88,7 +93,7 @@
               <col class="w-[118px]" />
               <col class="w-[94px]" />
               <col class="w-[94px]" />
-              <col class="w-[122px]" />
+              <col v-if="SHOW_OFFICIAL_DISCOUNT" class="w-[122px]" />
               <col class="w-[112px]" />
               <col class="w-[140px]" />
               <col class="w-[36px]" />
@@ -118,7 +123,11 @@
                     {{ t('modelPricing.blocks.unitPaid') }}
                   </span>
                 </th>
-                <th rowspan="2" class="px-2 py-2 text-right align-middle font-medium">
+                <th
+                  v-if="SHOW_OFFICIAL_DISCOUNT"
+                  rowspan="2"
+                  class="px-2 py-2 text-right align-middle font-medium"
+                >
                   {{ t('modelPricing.columns.discount') }}
                 </th>
                 <th rowspan="2" class="px-2 py-2 text-left align-middle font-medium">
@@ -148,14 +157,14 @@
 
             <tbody v-if="loading">
               <tr>
-                <td colspan="10" class="py-16 text-center">
+                <td :colspan="tableColspan" class="py-16 text-center">
                   <Icon name="refresh" size="lg" class="inline-block animate-spin text-gray-400" />
                 </td>
               </tr>
             </tbody>
             <tbody v-else-if="filteredRows.length === 0">
               <tr>
-                <td colspan="10" class="py-16 text-center">
+                <td :colspan="tableColspan" class="py-16 text-center">
                   <Icon name="inbox" size="xl" class="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-dark-500" />
                   <p class="text-sm text-gray-500 dark:text-dark-400">{{ t('modelPricing.empty') }}</p>
                 </td>
@@ -240,7 +249,7 @@
                   </td>
 
                   <!-- 折扣 -->
-                  <td class="px-2 py-2.5 text-right align-middle">
+                  <td v-if="SHOW_OFFICIAL_DISCOUNT" class="px-2 py-2.5 text-right align-middle">
                     <div class="flex flex-col items-end gap-0.5">
                       <span
                         class="inline-flex items-center whitespace-nowrap rounded-md border px-1.5 py-0.5 text-xs font-semibold"
@@ -290,7 +299,7 @@
 
                 <!-- 展开：分组 × 线路报价 -->
                 <tr v-if="isOpen(row.name)" class="border-b border-gray-100 dark:border-dark-800">
-                  <td colspan="10" class="bg-gray-50/40 px-4 pb-4 pt-2 dark:bg-dark-800/30">
+                  <td :colspan="tableColspan" class="bg-gray-50/40 px-4 pb-4 pt-2 dark:bg-dark-800/30">
                     <div class="mb-2 flex flex-wrap items-center gap-2">
                       <span
                         class="rounded bg-gray-200/70 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-dark-700 dark:text-dark-300"
@@ -311,7 +320,7 @@
                         <col class="w-[90px]" />
                         <col class="w-[96px]" />
                         <col class="w-[96px]" />
-                        <col class="w-[190px]" />
+                        <col v-if="SHOW_OFFICIAL_DISCOUNT" class="w-[190px]" />
                         <col />
                       </colgroup>
                       <thead>
@@ -323,7 +332,7 @@
                           <th class="px-2 py-1.5 text-right font-medium">{{ t('modelPricing.columns.output') }}</th>
                           <th class="px-2 py-1.5 text-right font-medium">{{ t('modelPricing.columns.cacheRead') }}</th>
                           <th class="px-2 py-1.5 text-right font-medium">{{ t('modelPricing.columns.cacheWrite') }}</th>
-                          <th class="px-2 py-1.5 text-right font-medium">
+                          <th v-if="SHOW_OFFICIAL_DISCOUNT" class="px-2 py-1.5 text-right font-medium">
                             {{ t('modelPricing.expand.vsOfficial') }}
                             <span class="font-normal text-gray-400 dark:text-dark-500">
                               ({{ t('modelPricing.columns.input') }})
@@ -337,12 +346,12 @@
                           v-for="offer in sortedOffers(row)"
                           :key="offer.key"
                           class="border-t border-gray-100 dark:border-dark-800"
-                          :class="offer.above && 'bg-amber-50/40 dark:bg-amber-950/10'"
+                          :class="SHOW_OFFICIAL_DISCOUNT && offer.above && 'bg-amber-50/40 dark:bg-amber-950/10'"
                         >
                           <td class="px-2 py-1.5 font-medium text-gray-800 dark:text-dark-100">
                             <span class="inline-flex items-center gap-1">
                               <span
-                                v-if="offer.above"
+                                v-if="SHOW_OFFICIAL_DISCOUNT && offer.above"
                                 class="h-3 w-[3px] rounded-sm bg-amber-400"
                                 :aria-label="t('modelPricing.discount.aboveLabel')"
                               ></span>
@@ -370,7 +379,7 @@
                           <td class="px-2 py-1.5 text-right tabular-nums text-gray-800 dark:text-dark-100">
                             {{ money(offer.cacheWrite) }}
                           </td>
-                          <td class="px-2 py-1.5">
+                          <td v-if="SHOW_OFFICIAL_DISCOUNT" class="px-2 py-1.5">
                             <div v-if="offer.ratio != null" class="flex flex-col items-end gap-1">
                               <div class="flex items-center justify-end gap-1.5">
                                 <span
@@ -430,8 +439,10 @@
         <span>{{ t('modelPricing.notes.paid') }}</span>
         <span class="h-3 w-px bg-gray-200 dark:bg-dark-700"></span>
         <span>{{ t('modelPricing.notes.official') }}</span>
-        <span class="h-3 w-px bg-gray-200 dark:bg-dark-700"></span>
-        <span>{{ t('modelPricing.notes.discount') }}</span>
+        <template v-if="SHOW_OFFICIAL_DISCOUNT">
+          <span class="h-3 w-px bg-gray-200 dark:bg-dark-700"></span>
+          <span>{{ t('modelPricing.notes.discount') }}</span>
+        </template>
         <span class="h-3 w-px bg-gray-200 dark:bg-dark-700"></span>
         <span>{{ t('modelPricing.notes.peak') }}</span>
       </p>
@@ -456,6 +467,7 @@ import userGroupsAPI from '@/api/groups'
 import { useAppStore } from '@/stores/app'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import { platformBadgeClass } from '@/utils/platformColors'
+import { SHOW_OFFICIAL_DISCOUNT } from '@/constants/pricingUi'
 import {
   BILLING_MODE_TOKEN,
   BILLING_MODE_PER_REQUEST,
@@ -521,16 +533,26 @@ const loading = ref(false)
 const searchQuery = ref('')
 const selectedGroup = ref<string | number>('all')
 const selectedPlatform = ref<string>('all')
-const sortKey = ref<string>('discount')
+/** 折扣体系关闭时默认按实付输入价升序，避免出现「看不出依据」的排序。 */
+const sortKey = ref<string>(SHOW_OFFICIAL_DISCOUNT ? 'discount' : 'input')
 const onlyDiscounted = ref(false)
 const expanded = ref<Set<string>>(new Set())
 
-const sortOptions = computed<SelectOption[]>(() => [
-  { value: 'discount', label: t('modelPricing.sort.discountAsc') },
-  { value: 'input', label: t('modelPricing.sort.inputAsc') },
-  { value: 'output', label: t('modelPricing.sort.outputAsc') },
-  { value: 'name', label: t('modelPricing.sort.name') },
-])
+/** 表格总列数：模型 + 官方 3 + 本站 3 + 折扣 + 分组 + 展开。 */
+const tableColspan = SHOW_OFFICIAL_DISCOUNT ? 10 : 9
+
+const sortOptions = computed<SelectOption[]>(() => {
+  const options: SelectOption[] = []
+  if (SHOW_OFFICIAL_DISCOUNT) {
+    options.push({ value: 'discount', label: t('modelPricing.sort.discountAsc') })
+  }
+  options.push(
+    { value: 'input', label: t('modelPricing.sort.inputAsc') },
+    { value: 'output', label: t('modelPricing.sort.outputAsc') },
+    { value: 'name', label: t('modelPricing.sort.name') },
+  )
+  return options
+})
 
 /** 分组下拉：只列出当前用户可见分组，值用分组 ID。 */
 const groupOptions = computed<SelectOption[]>(() => {
